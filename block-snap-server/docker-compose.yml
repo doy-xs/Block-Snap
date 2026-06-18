@@ -1,0 +1,75 @@
+services:
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.2
+    container_name: es-9.4.2
+    environment:
+      - discovery.type=single-node       # 声明为单节点开发模式
+      - xpack.security.enabled=false     # 关闭安全验证，免密直接访问
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"     # 限制 JVM 内存，防止撑爆服务器
+    volumes:
+      - es_data:/usr/share/elasticsearch/data  # 映射命名卷，保证数据不丢失
+    ports:
+      - "9200:9200"                      # 暴露 REST API 端口
+    restart: always
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:9.4.2  # 保持与 ES 版本完全一致
+    container_name: kibana-9.4.2
+    ports:
+      - "5601:5601"                                # 暴露 Kibana 前端访问端口
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200 # 让 Kibana 通过 Docker 内部网络连接 ES 服务名
+      - I18N_LOCALE=zh-CN                          # 将 Kibana 界面设置为中文
+    restart: always
+    depends_on:
+      - elasticsearch
+
+  nacos:
+    image: nacos/nacos-server:v3.2.1-2026.04.03
+    container_name: nacos
+    environment:
+      - MODE=standalone
+      - NACOS_AUTH_ENABLE=true
+      - JVM_XMS=512M
+      - JVM_XMX=512M
+      # 3.x版本建议设置一个固定的鉴权密钥(Base64)
+      - NACOS_AUTH_IDENTITY_KEY=nacos
+      - NACOS_AUTH_IDENTITY_VALUE=nacos
+      - NACOS_AUTH_TOKEN=SecretKey012345678901234567890123456789012345678901234567890123456789
+    volumes:
+      - nacos_data:/home/nacos/data
+      - nacos_logs:/home/nacos/logs
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+      - "8080:8080"
+    restart: always
+
+
+
+  mysql:
+    image: mysql:8.4
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql     # 修改了这里
+
+  valkey:
+    image: valkey/valkey:9.0
+    ports:
+      - "6380:6379"
+    volumes:
+      - valkey_data:/data
+
+# 在最底部统一声明所有用到的命名卷
+volumes:
+  nacos_data:
+  nacos_logs:
+  mysql_data:
+  valkey_data:
+  es_data:
+

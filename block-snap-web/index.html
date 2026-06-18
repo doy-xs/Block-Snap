@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Block Snap · MC 启动日志</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="toast" class="toast hidden"></div>
+
+    <!-- 落地页 -->
+    <div id="screen-landing" class="screen">
+      <header class="landing-header">
+        <div class="brand">
+          <span class="brand-block"></span>
+          <span class="brand-name">Block Snap</span>
+        </div>
+        <div class="landing-actions">
+          <button class="btn btn-ghost" data-auth="login">登录</button>
+          <button class="btn btn-primary" data-auth="register">注册</button>
+        </div>
+      </header>
+
+      <section class="hero">
+        <div class="hero-badge">Minecraft 数据 · 个人档案 · 启动分析</div>
+        <h1>Block-Snap<br /><span class="hero-accent">Minecraft 一站式个人数据分析平台</span></h1>
+        <p class="hero-desc">
+          从启动耗时、整合包、模组、资源包到光影配置，Block Snap 帮你沉淀每一次 Minecraft 体验，
+          把零散日志变成清晰、可对比、可分享的个人数据档案。
+        </p>
+        <div class="hero-actions">
+          <button class="btn btn-primary btn-lg" data-demo="report">演示页面</button>
+        </div>
+      </section>
+
+      <section class="flow-section">
+        <h2>工作原理</h2>
+        <div class="flow-steps">
+          <div class="flow-step"><span class="step-num">1</span><h4>启动游戏</h4><p>Block Snap 模组静默采集各阶段耗时</p></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step"><span class="step-num">2</span><h4>上报日志</h4><p>退出或进主菜单后上传至云端</p></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step"><span class="step-num">3</span><h4>合成页面</h4><p>自动生成载入分析页，可公开分享</p></div>
+        </div>
+      </section>
+
+      <section class="features">
+        <article class="feature-card">
+          <div class="feature-icon mod">🧩</div>
+          <h3>模组耗时排行</h3>
+          <p>逐个模组载入毫秒数，快速定位拖慢启动的罪魁祸首。</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon pack">📦</div>
+          <h3>整合包维度</h3>
+          <p>按整合包版本对比历史启动时间，追踪更新影响。</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon res">🎨</div>
+          <h3>资源包 / 光影</h3>
+          <p>材质与光影单独计时，优化视觉配置不牺牲帧率。</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon shader">🔗</div>
+          <h3>分享展示</h3>
+          <p>生成公开链接，腐竹向玩家展示服内客户端配置与性能。</p>
+        </article>
+      </section>
+
+      <footer class="landing-footer">
+        <span>Block Snap · 启动日志演示</span>
+        <span>报告数据为 Mock · 用户系统已对接后端</span>
+      </footer>
+    </div>
+
+    <!-- 主应用（登录后） -->
+    <div id="screen-app" class="screen hidden">
+      <aside class="sidebar">
+        <div class="brand sidebar-brand">
+          <span class="brand-block"></span>
+          <span class="brand-name">Block Snap</span>
+        </div>
+        <nav class="sidebar-nav">
+          <button class="nav-item active" data-page="instances"><span class="nav-icon">📁</span> 我的实例</button>
+          <button class="nav-item" data-page="sites"><span class="nav-icon">🌐</span> 实用网站</button>
+          <button class="nav-item" data-page="timeline"><span class="nav-icon">⏱️</span> 变更时间线</button>
+          <button class="nav-item" data-page="updates"><span class="nav-icon">📰</span> 版本更新</button>
+          <button class="nav-item" data-page="news"><span class="nav-icon">📡</span> MC新闻<span class="wip-tag">开发中</span></button>
+          <button class="nav-item" data-page="minigame"><span class="nav-icon">🎮</span> 小游戏<span class="wip-tag">开发中</span></button>
+        </nav>
+        <div class="sidebar-footer">
+          <button class="btn btn-ghost btn-sm" id="btn-settings" title="账户设置">⚙️ 设置</button>
+        </div>
+      </aside>
+
+      <div class="app-main">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button class="btn btn-ghost btn-sm" id="btn-back-instance" style="display:none;margin-right:8px;">← 返回</button>
+            <h2 id="page-title">我的实例</h2>
+            <span class="demo-badge">演示数据</span>
+          </div>
+          <div class="topbar-right">
+            <button class="btn btn-ghost btn-sm" id="btn-account">欢迎回来，Spark</button>
+          </div>
+        </header>
+        <div class="content" id="content-area"></div>
+      </div>
+    </div>
+
+    <!-- 公开报告页（无需登录） -->
+    <div id="screen-report" class="screen hidden">
+      <header class="report-topbar">
+        <button class="btn btn-ghost" id="btn-back">← 返回</button>
+        <div class="brand sm"><span class="brand-block"></span><span>Block Snap 启动报告</span></div>
+        <button class="btn btn-outline btn-sm" id="btn-share-report">分享</button>
+      </header>
+      <div class="report-page" id="report-body"></div>
+    </div>
+
+    <!-- 认证弹窗 -->
+    <div id="auth-modal" class="modal hidden">
+      <div class="modal-backdrop" data-close-modal></div>
+      <div class="modal-panel">
+        <button class="modal-close" data-close-modal>×</button>
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-auth-tab="login">登录</button>
+          <button class="auth-tab" data-auth-tab="register">注册</button>
+          <button class="auth-tab" data-auth-tab="forgot">忘记密码</button>
+        </div>
+        <form id="form-login" class="auth-form">
+          <label><span>账号</span><input name="username" required placeholder="用户名 / 手机 / 邮箱" /></label>
+          <label><span>密码</span><input name="password" type="password" required /></label>
+          <button type="submit" class="btn btn-primary btn-block">登录</button>
+        </form>
+        <form id="form-register" class="auth-form hidden">
+          <h3>创建账号</h3>
+          <label><span>用户名</span><input name="username" required /></label>
+          <label><span>密码</span><input name="password" type="password" required /></label>
+          <label><span>确认密码</span><input name="confirmPassword" type="password" required /></label>
+          <label><span>手机号（可选）</span><input name="phone" data-validate="phone" /></label>
+          <div class="field-row code-section hidden" data-code-section="phone">
+            <label class="flex-grow"><span>手机验证码</span><input name="phoneVerificationCode" data-code-input="phone" /></label>
+            <button type="button" class="btn btn-secondary code-btn" data-scene="register" data-target="phone">获取验证码</button>
+          </div>
+          <label><span>邮箱（可选）</span><input name="email" type="email" data-validate="email" /></label>
+          <div class="field-row code-section hidden" data-code-section="email">
+            <label class="flex-grow"><span>邮箱验证码</span><input name="emailVerificationCode" data-code-input="email" /></label>
+            <button type="button" class="btn btn-secondary code-btn" data-scene="register" data-target="email">获取验证码</button>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">注册</button>
+        </form>
+        <form id="form-forgot" class="auth-form hidden">
+          <h3>重置密码</h3>
+          <label><span>手机 / 邮箱</span><input name="account" required data-validate="account" /></label>
+          <div class="field-row code-section hidden" data-code-section="account">
+            <label class="flex-grow"><span>验证码</span><input name="verificationCode" data-code-input="account" /></label>
+            <button type="button" class="btn btn-secondary code-btn" data-scene="forgot-password" data-target="account">获取验证码</button>
+          </div>
+          <label><span>新密码</span><input name="resetPassword" type="password" required /></label>
+          <label><span>确认新密码</span><input name="confirmResetPassword" type="password" required /></label>
+          <button type="submit" class="btn btn-primary btn-block">重置</button>
+        </form>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

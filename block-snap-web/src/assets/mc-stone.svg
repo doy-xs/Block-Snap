@@ -1,0 +1,9 @@
+<svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+  <!-- MC Stone texture -->
+  <rect width="32" height="32" fill="#7f7f7f"/>
+  <rect x="0" y="0" width="8" height="8" fill="#8a8a8a"/>
+  <rect x="16" y="8" width="8" height="8" fill="#747474"/>
+  <rect x="8" y="16" width="8" height="8" fill="#8a8a8a"/>
+  <rect x="24" y="16" width="8" height="8" fill="#6e6e6e"/>
+  <rect x="0" y="24" width="8" height="8" fill="#747474"/>
+</svg>

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <pattern id="grass" width="64" height="64" patternUnits="userSpaceOnUse">
+      <rect width="64" height="64" fill="#6aa84f"/>
+      <rect y="0" width="64" height="10" fill="#7fba59"/>
+      <rect y="10" width="64" height="4" fill="#8ecb63" opacity="0.65"/>
+      <path d="M0 12h64M0 16h64" stroke="#5e913d" stroke-width="1" opacity="0.25"/>
+      <path d="M0 24h64M0 28h64" stroke="#4e7a32" stroke-width="1" opacity="0.2"/>
+    </pattern>
+    <pattern id="dirt" width="64" height="64" patternUnits="userSpaceOnUse">
+      <rect width="64" height="64" fill="#8b6b3f"/>
+      <path d="M0 0h64M0 16h64M0 32h64M0 48h64" stroke="#6f5330" stroke-width="1" opacity="0.35"/>
+      <circle cx="14" cy="21" r="2.2" fill="#6f5330" opacity="0.45"/>
+      <circle cx="43" cy="39" r="2.6" fill="#6f5330" opacity="0.35"/>
+      <circle cx="28" cy="52" r="1.8" fill="#5f4527" opacity="0.35"/>
+    </pattern>
+    <linearGradient id="overlay" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#000" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0.24"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#grass)"/>
+  <rect y="660" width="1920" height="420" fill="url(#dirt)"/>
+  <rect width="1920" height="1080" fill="url(#overlay)"/>
+  <g opacity="0.18">
+    <circle cx="260" cy="180" r="120" fill="#cfe8a9"/>
+    <circle cx="1660" cy="210" r="160" fill="#dbecc0"/>
+    <circle cx="1320" cy="820" r="200" fill="#9bb06d"/>
+  </g>
+</svg>

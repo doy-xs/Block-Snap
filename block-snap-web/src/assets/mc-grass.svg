@@ -1,0 +1,19 @@
+<svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+  <!-- MC Grass Block top texture (32x32, 4x scale of 8x8 pixel art) -->
+  <!-- Base dirt -->
+  <rect width="32" height="32" fill="#5a4a32"/>
+  <!-- Grass surface -->
+  <rect width="32" height="24" fill="#7c9c4c" rx="0"/>
+  <!-- Grass pixel variations -->
+  <rect x="0" y="0" width="8" height="8" fill="#8fb05a"/>
+  <rect x="16" y="4" width="8" height="8" fill="#6d8a3e"/>
+  <rect x="8" y="12" width="8" height="8" fill="#8fb05a"/>
+  <rect x="24" y="0" width="8" height="8" fill="#6d8a3e"/>
+  <rect x="4" y="8" width="4" height="4" fill="#95b860"/>
+  <rect x="20" y="8" width="4" height="4" fill="#658036"/>
+  <!-- Dirt pixels -->
+  <rect x="0" y="24" width="8" height="8" fill="#8b6b4c"/>
+  <rect x="8" y="24" width="8" height="8" fill="#7a5c3e"/>
+  <rect x="16" y="24" width="8" height="8" fill="#8b6b4c"/>
+  <rect x="24" y="24" width="8" height="8" fill="#6b4e32"/>
+</svg>
