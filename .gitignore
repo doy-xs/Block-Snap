@@ -1,0 +1,56 @@
+# ============================================================
+# Block Snap — 根目录 .gitignore
+# Git 仓库根：block-snap/
+# ============================================================
+
+# ── Java / Maven（block-snap-server）──
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+hs_err_pid*
+replay_pid*
+
+# ── Node / Vite（block-snap-web）──
+node_modules/
+dist/
+.vite/
+*.local
+
+# ── 环境变量与本地配置（含密码，勿提交）──
+.env
+.env.*
+!.env.example
+
+# 本地覆盖配置（若以后使用）
+**/application-local.yml
+**/application-local.yaml
+**/application-local.properties
+
+# ── IntelliJ IDEA（个人/本机 IDE 状态）──
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# ── 其他 IDE / 编辑器 ──
+.vscode/
+*.swp
+*.swo
+*~
+
+# ── 系统文件 ──
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ── 日志与临时文件 ──
+*.log
+logs/
+tmp/
+temp/
+
+# ── Maven wrapper（若未使用可忽略；当前项目无 wrapper 则无影响）──
+# .mvn/wrapper/maven-wrapper.jar

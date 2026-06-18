@@ -1,5 +1,5 @@
 import { api, isSuccess, getMessage } from './api.js';
-import { isLoggedIn, saveToken, saveVerifyToken, clearAuth, clearVerifyToken } from './auth.js';
+import { isLoggedIn, saveToken, saveUsername, getUsername, saveVerifyToken, clearAuth, clearVerifyToken } from './auth.js';
 import {
   CATEGORY_META, CHANGE_TYPE, RISK_LEVEL,
   INSTANCES, MODPACKS, PLATFORM_UPDATES,
@@ -100,11 +100,34 @@ function showScreen(name) {
 
 function enterApp() {
   showScreen('app');
+  updateAccountButton();
   navigateTo('instances');
 }
 
 function enterLanding() {
   showScreen('landing');
+}
+
+const DEMO_NAMES = [
+  'Steve', 'Alex', 'Spark', 'Notch', 'Herobrine', 'Dream', 'Technoblade',
+  'Jeb', 'Dinnerbone', 'Grumm', 'CaptainSparklez', 'Grian', 'Ph1LzA',
+];
+
+function getDemoDisplayName() {
+  const key = 'demoDisplayName';
+  let name = sessionStorage.getItem(key);
+  if (!name) {
+    name = DEMO_NAMES[Math.floor(Math.random() * DEMO_NAMES.length)];
+    sessionStorage.setItem(key, name);
+  }
+  return name;
+}
+
+function updateAccountButton() {
+  const btn = document.getElementById('btn-account');
+  if (!btn) return;
+  const name = isLoggedIn() ? (getUsername() || '用户') : getDemoDisplayName();
+  btn.textContent = `欢迎回来，${name}`;
 }
 
 // ── Navigation ──
@@ -115,7 +138,7 @@ const PAGE_TITLES = {
   updates: '版本更新',
   news: 'MC新闻',
   minigame: '小游戏',
-  settings: '账户设置',
+  settings: '我的账户',
   'instance-detail': '实例详情',
 };
 
@@ -137,6 +160,8 @@ function navigateTo(page, data) {
   } else {
     backBtn.style.display = 'none';
   }
+
+  document.querySelector('.app-main')?.classList.toggle('app-main-centered', page === 'instances');
 
   renderPage(data);
 }
@@ -169,37 +194,40 @@ function renderInstances() {
 
     return `
       <div class="instance-card" data-instance="${inst.id}">
-        <div class="instance-card-top">
-          <div class="instance-card-info">
-            <h3>${inst.name}</h3>
-            <div class="instance-tags">
-              <span class="inst-tag">${inst.minecraftVersion}</span>
-              <span class="inst-tag">${inst.loaderType} ${inst.loaderVersion}</span>
-              <span class="inst-tag">Java ${inst.javaVersion}</span>
-            </div>
-            <p class="inst-mp">
-              📦 ${mp ? `${mp.name} v${mp.version}` : '无绑定整合包'}
-              <span class="inst-mp-platform">${mp?.sourcePlatform || ''}</span>
-            </p>
-          </div>
+        <div class="instance-card-header">
+          <h3 class="instance-card-title">${inst.name}</h3>
           <div class="instance-card-stats">
             <div class="inst-stat">
               <span class="inst-stat-num">${summary?.modCount || 0}</span>
               <span class="inst-stat-label">模组</span>
             </div>
+            <div class="inst-stat-divider" aria-hidden="true"></div>
             <div class="inst-stat">
               <span class="inst-stat-num">${summary?.rpCount || 0}</span>
               <span class="inst-stat-label">资源包</span>
             </div>
+            <div class="inst-stat-divider" aria-hidden="true"></div>
             <div class="inst-stat">
               <span class="inst-stat-num">${summary?.spCount || 0}</span>
               <span class="inst-stat-label">光影</span>
             </div>
           </div>
         </div>
+        <div class="instance-tags">
+          <span class="inst-tag">${inst.minecraftVersion}</span>
+          <span class="inst-tag">${inst.loaderType} ${inst.loaderVersion}</span>
+          <span class="inst-tag">Java ${inst.javaVersion}</span>
+        </div>
+        <div class="instance-card-modpack">
+          <span class="inst-mp-icon" aria-hidden="true">📦</span>
+          <span class="inst-mp-name">${mp ? `${mp.name} v${mp.version}` : '无绑定整合包'}</span>
+          ${mp?.sourcePlatform ? `<span class="inst-mp-platform">${mp.sourcePlatform}</span>` : ''}
+        </div>
         <div class="instance-card-foot">
-          <span class="inst-foot-item">🕐 最近启动 ${summary?.lastLaunch?.slice(5, 16) || '无记录'}</span>
-          <span class="inst-foot-item">⏱️ ${formatDuration(summary?.totalMs || 0)}</span>
+          <div class="inst-foot-meta">
+            <span class="inst-foot-item">🕐 最近启动 ${summary?.lastLaunch?.slice(5, 16) || '无记录'}</span>
+            <span class="inst-foot-item">⏱️ ${formatDuration(summary?.totalMs || 0)}</span>
+          </div>
           <div class="inst-foot-badges">
             ${pending > 0 ? `<span class="inst-badge badge-update">${pending} 项更新</span>` : ''}
             ${drift ? `<span class="inst-badge badge-drift">${drift.count} 项配置漂移</span>` : ''}
@@ -745,50 +773,55 @@ function renderUsefulSites() {
 }
 
 // ============================================================
-// Page: 账户设置 (unchanged from original)
+// Page: 我的账户
 // ============================================================
 function renderSettings() {
   backPage = null;
   const hasVerify = !!localStorage.getItem('verifyToken');
   return `
     <div class="settings-page">
-      <div class="panel">
-        <h3>二次验证</h3>
-        <div class="verify-status ${hasVerify ? 'ok' : ''}">${hasVerify ? '✓ 已通过' : '○ 尚未验证'}</div>
-        <form id="form-verify" class="settings-form">
-          <label><span>手机 / 邮箱</span><input name="account" required data-validate="account" /></label>
-          <div class="field-row code-section hidden" data-code-section="account">
-            <label class="flex-grow"><span>验证码</span><input name="verificationCode" data-code-input="account" /></label>
-            <button type="button" class="btn btn-secondary code-btn" data-scene="verify-account" data-target="account">获取验证码</button>
-          </div>
-          <button type="submit" class="btn btn-primary">验证</button>
-        </form>
-      </div>
-      <div class="panel">
-        <h3>修改密码</h3>
-        <form id="form-password" class="settings-form">
-          <label><span>原密码</span><input name="oldPassword" type="password" required /></label>
-          <label><span>新密码</span><input name="newPassword" type="password" required /></label>
-          <label><span>确认</span><input name="confirmNewPassword" type="password" required /></label>
-          <button type="submit" class="btn btn-primary">修改</button>
-        </form>
-      </div>
-      <div class="panel">
-        <h3>绑定账号</h3>
-        <form id="form-bind" class="settings-form">
-          <label class="checkbox-label"><input type="checkbox" name="needVerify" checked /><span>携带 Verify-Token</span></label>
-          <label><span>手机 / 邮箱</span><input name="account" required data-validate="account" /></label>
-          <div class="field-row code-section hidden" data-code-section="account">
-            <label class="flex-grow"><span>验证码</span><input name="verificationCode" data-code-input="account" /></label>
-            <button type="button" class="btn btn-secondary code-btn" data-scene="bind-account" data-target="account">获取验证码</button>
-          </div>
-          <button type="submit" class="btn btn-primary">绑定</button>
-        </form>
-      </div>
-      <div class="panel" style="border-color:rgba(239,83,80,0.3)">
-        <h3>退出登录</h3>
-        <p style="color:var(--muted);font-size:0.85rem;margin-bottom:12px">退出后需要重新登录才能访问。</p>
-        <button class="btn btn-primary" id="btn-logout-settings" style="background:linear-gradient(180deg, #ef5350, #c62828);border-color:rgba(239,83,80,0.5)">退出登录</button>
+      <div class="settings-card">
+        <div class="settings-grid">
+          <section class="settings-section">
+            <h3>二次验证</h3>
+            <div class="verify-status ${hasVerify ? 'ok' : ''}">${hasVerify ? '✓ 已通过' : '○ 尚未验证'}</div>
+            <form id="form-verify" class="settings-form">
+              <label><span>手机 / 邮箱</span><input name="account" required data-validate="account" /></label>
+              <div class="field-row code-section hidden" data-code-section="account">
+                <label class="flex-grow"><span>验证码</span><input name="verificationCode" data-code-input="account" /></label>
+                <button type="button" class="btn btn-secondary code-btn" data-scene="verify-account" data-target="account">获取验证码</button>
+              </div>
+              <button type="submit" class="btn btn-primary">验证</button>
+            </form>
+          </section>
+          <section class="settings-section">
+            <h3>修改密码</h3>
+            <form id="form-password" class="settings-form">
+              <label><span>原密码</span><input name="oldPassword" type="password" required /></label>
+              <label><span>新密码</span><input name="newPassword" type="password" required /></label>
+              <label><span>确认</span><input name="confirmNewPassword" type="password" required /></label>
+              <button type="submit" class="btn btn-primary">修改</button>
+            </form>
+          </section>
+        </div>
+        <div class="settings-divider"></div>
+        <section class="settings-section">
+          <h3>绑定账号</h3>
+          <form id="form-bind" class="settings-form settings-form-inline">
+            <label><span>手机 / 邮箱</span><input name="account" required data-validate="account" /></label>
+            <div class="field-row code-section hidden" data-code-section="account">
+              <label class="flex-grow"><span>验证码</span><input name="verificationCode" data-code-input="account" /></label>
+              <button type="button" class="btn btn-secondary code-btn" data-scene="bind-account" data-target="account">获取验证码</button>
+            </div>
+            <button type="submit" class="btn btn-primary">绑定</button>
+          </form>
+        </section>
+        <div class="settings-divider"></div>
+        <section class="settings-section settings-section-danger">
+          <h3>退出登录</h3>
+          <p class="settings-hint">退出后需要重新登录才能访问。</p>
+          <button class="btn btn-danger" id="btn-logout-settings">退出登录</button>
+        </section>
       </div>
     </div>`;
 }
@@ -941,7 +974,7 @@ function bindSettingsForms() {
   document.getElementById('form-bind')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const data = getFormData(e.target);
-    const needVerify = e.target.querySelector('[name="needVerify"]').checked;
+    const needVerify = !!localStorage.getItem('verifyToken');
     try {
       const r = await api.bindAccount(data.account, data.verificationCode, needVerify);
       if (isSuccess(r)) { showToast(getMessage(r)); clearVerifyToken(); e.target.reset(); renderPage(); bindPageEvents(); }
@@ -1008,8 +1041,10 @@ function setupAuth() {
       const r = await api.login(username, password);
       if (isSuccess(r)) {
         saveToken(r.data);
+        saveUsername(username);
         showToast(getMessage(r));
         closeAuthModal();
+        updateAccountButton();
         enterApp();
       } else showToast(getMessage(r), 'error');
     } catch { showToast('网络错误，请确认网关已启动', 'error'); }
@@ -1057,11 +1092,10 @@ function setupApp() {
     btn.addEventListener('click', () => navigateTo(btn.dataset.page));
   });
 
-  // Settings button (sidebar footer)
-  document.getElementById('btn-settings').addEventListener('click', () => navigateTo('settings'));
-
-  // Account button (topbar right) → also goes to settings
-  document.getElementById('btn-account').addEventListener('click', () => navigateTo('settings'));
+  document.getElementById('btn-account').addEventListener('click', () => {
+    if (isLoggedIn()) navigateTo('settings');
+    else openAuthModal('login');
+  });
 
   // Logout from settings page (delegated)
   document.getElementById('content-area').addEventListener('click', (e) => {

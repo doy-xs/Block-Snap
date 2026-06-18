@@ -88,27 +88,29 @@
           <span class="brand-name">Block Snap</span>
         </div>
         <nav class="sidebar-nav">
-          <button class="nav-item active" data-page="instances"><span class="nav-icon">📁</span> 我的实例</button>
-          <button class="nav-item" data-page="sites"><span class="nav-icon">🌐</span> 实用网站</button>
-          <button class="nav-item" data-page="timeline"><span class="nav-icon">⏱️</span> 变更时间线</button>
-          <button class="nav-item" data-page="updates"><span class="nav-icon">📰</span> 版本更新</button>
-          <button class="nav-item" data-page="news"><span class="nav-icon">📡</span> MC新闻<span class="wip-tag">开发中</span></button>
-          <button class="nav-item" data-page="minigame"><span class="nav-icon">🎮</span> 小游戏<span class="wip-tag">开发中</span></button>
+          <button class="nav-item active" data-page="instances"><span class="nav-icon">📁</span><span class="nav-label">我的实例</span></button>
+          <button class="nav-item" data-page="sites"><span class="nav-icon">🌐</span><span class="nav-label">实用网站</span></button>
+          <button class="nav-item" data-page="timeline"><span class="nav-icon">⏱️</span><span class="nav-label">变更时间线</span></button>
+          <button class="nav-item" data-page="updates"><span class="nav-icon">📰</span><span class="nav-label">版本更新</span></button>
+          <button class="nav-item" data-page="news"><span class="nav-icon">📡</span><span class="nav-label">MC新闻<span class="wip-tag">开发中</span></span></button>
+          <button class="nav-item" data-page="minigame"><span class="nav-icon">🎮</span><span class="nav-label">小游戏<span class="wip-tag">开发中</span></span></button>
         </nav>
         <div class="sidebar-footer">
-          <button class="btn btn-ghost btn-sm" id="btn-settings" title="账户设置">⚙️ 设置</button>
+          <span class="sidebar-settings-icon" title="设置">⚙️</span>
         </div>
       </aside>
 
       <div class="app-main">
         <header class="topbar">
-          <div class="topbar-left">
-            <button class="btn btn-ghost btn-sm" id="btn-back-instance" style="display:none;margin-right:8px;">← 返回</button>
+          <div class="topbar-start">
+            <button class="btn btn-ghost btn-sm" id="btn-back-instance" style="display:none;">← 返回</button>
+          </div>
+          <div class="topbar-center">
             <h2 id="page-title">我的实例</h2>
             <span class="demo-badge">演示数据</span>
           </div>
-          <div class="topbar-right">
-            <button class="btn btn-ghost btn-sm" id="btn-account">欢迎回来，Spark</button>
+          <div class="topbar-end">
+            <button class="btn btn-ghost btn-sm" id="btn-account">欢迎回来</button>
           </div>
         </header>
         <div class="content" id="content-area"></div>
