@@ -2,35 +2,29 @@ package com.github.doyxs.blocksnap.service.model.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 
 @Data
-@TableName("mod_snapshot")
-public class ModSnapshot {
+@TableName("instance")
+public class Instance {
 
     @TableId(type = IdType.AUTO)
     private Integer id;
 
-    private Integer snapshotId;
+    private Long userId;
 
-    private Integer modInfoId;
+    private String clientKey;
 
-    private String version;
+    private String name;
 
-    private Integer isLatestVersion;
-
-    private String modHash;
-
-    private Long loadTime;
-
-    private Integer isDelete;
-
-    private LocalDateTime addedTime;
-
-    private LocalDateTime updateTime;
+    @TableLogic
+    private Integer isDeleted;
 
     private LocalDateTime createTime;
+
+    private LocalDateTime updateTime;
 }

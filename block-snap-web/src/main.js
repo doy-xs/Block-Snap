@@ -6,7 +6,7 @@ import {
   formatMs, formatDuration, pct,
   getInstance, getModpack, getLatestSnapshot,
   getInstanceAssetSummary, getPendingUpdateCount,
-  getConfigDriftSummary,
+  getSortedInstances, toggleInstanceFavorite, setInstanceNote,
   computeSnapshotDiff, getSeverityClass, getRiskClass,
 } from './mock-data.js';
 
@@ -186,61 +186,82 @@ function renderPage(data) {
 // ============================================================
 function renderInstances() {
   backPage = null;
-  const cards = INSTANCES.map((inst) => {
+  const list = getSortedInstances();
+  const cards = list.map((inst) => {
     const mp = getModpack(inst.boundModpackId);
     const summary = getInstanceAssetSummary(inst);
     const pending = getPendingUpdateCount(inst.id);
-    const drift = getConfigDriftSummary(inst);
+
+    const hasNote = !!(inst.note && inst.note.trim());
 
     return `
-      <div class="instance-card" data-instance="${inst.id}">
-        <div class="instance-card-header">
-          <h3 class="instance-card-title">${inst.name}</h3>
-          <div class="instance-card-stats">
-            <div class="inst-stat">
-              <span class="inst-stat-num">${summary?.modCount || 0}</span>
-              <span class="inst-stat-label">模组</span>
-            </div>
-            <div class="inst-stat-divider" aria-hidden="true"></div>
-            <div class="inst-stat">
-              <span class="inst-stat-num">${summary?.rpCount || 0}</span>
-              <span class="inst-stat-label">资源包</span>
-            </div>
-            <div class="inst-stat-divider" aria-hidden="true"></div>
-            <div class="inst-stat">
-              <span class="inst-stat-num">${summary?.spCount || 0}</span>
-              <span class="inst-stat-label">光影</span>
-            </div>
-          </div>
+      <article class="instance-card${inst.favorited ? ' instance-card-fav' : ''}" data-instance="${inst.id}">
+        <button type="button" class="inst-fav-btn${inst.favorited ? ' fav-active' : ''}" data-inst-fav="${inst.id}" aria-label="${inst.favorited ? '取消收藏' : '收藏实例'}" title="${inst.favorited ? '取消收藏' : '收藏'}">${inst.favorited ? '★' : '☆'}</button>
+
+        <div class="instance-card-head">
+          <h3 class="instance-card-title">${escapeHtml(inst.name)}</h3>
+          ${pending > 0 ? `<span class="inst-badge badge-update">${pending} 项更新</span>` : ''}
         </div>
+
         <div class="instance-tags">
           <span class="inst-tag">${inst.minecraftVersion}</span>
           <span class="inst-tag">${inst.loaderType} ${inst.loaderVersion}</span>
           <span class="inst-tag">Java ${inst.javaVersion}</span>
         </div>
+
+        <div class="instance-card-stats" aria-label="资产数量">
+          <div class="inst-stat">
+            <span class="inst-stat-num">${summary?.modCount || 0}</span>
+            <span class="inst-stat-label">模组</span>
+          </div>
+          <div class="inst-stat-divider" aria-hidden="true"></div>
+          <div class="inst-stat">
+            <span class="inst-stat-num">${summary?.rpCount || 0}</span>
+            <span class="inst-stat-label">资源包</span>
+          </div>
+          <div class="inst-stat-divider" aria-hidden="true"></div>
+          <div class="inst-stat">
+            <span class="inst-stat-num">${summary?.spCount || 0}</span>
+            <span class="inst-stat-label">光影</span>
+          </div>
+        </div>
+
         <div class="instance-card-modpack">
           <span class="inst-mp-icon" aria-hidden="true">📦</span>
-          <span class="inst-mp-name">${mp ? `${mp.name} v${mp.version}` : '无绑定整合包'}</span>
+          <span class="inst-mp-name">${mp ? `${escapeHtml(mp.name)} v${mp.version}` : '无绑定整合包'}</span>
           ${mp?.sourcePlatform ? `<span class="inst-mp-platform">${mp.sourcePlatform}</span>` : ''}
         </div>
-        <div class="instance-card-foot">
-          <div class="inst-foot-meta">
-            <span class="inst-foot-item">🕐 最近启动 ${summary?.lastLaunch?.slice(5, 16) || '无记录'}</span>
-            <span class="inst-foot-item">⏱️ ${formatDuration(summary?.totalMs || 0)}</span>
-          </div>
-          <div class="inst-foot-badges">
-            ${pending > 0 ? `<span class="inst-badge badge-update">${pending} 项更新</span>` : ''}
-            ${drift ? `<span class="inst-badge badge-drift">${drift.count} 项配置漂移</span>` : ''}
-          </div>
+
+        <div class="instance-card-note${hasNote ? '' : ' hidden'}" data-no-nav>
+          <span class="inst-note-icon" aria-hidden="true">✎</span>
+          <input id="note-${inst.id}" type="text" class="inst-note-input" data-inst-note="${inst.id}" value="${escapeHtml(inst.note || '')}" placeholder="为这个实例添加备注…" maxlength="120" autocomplete="off">
         </div>
-      </div>`;
+
+        <footer class="instance-card-foot">
+          <span class="inst-foot-item">🕐 ${summary?.lastLaunch ? summary.lastLaunch.slice(5, 16) : '暂无启动记录'}</span>
+          <span class="inst-foot-item">⏱️ ${formatDuration(summary?.totalMs || 0)}</span>
+          ${hasNote ? '' : `<button type="button" class="inst-note-add" data-note-add="${inst.id}" data-no-nav>✎ 添加备注</button>`}
+          <span class="inst-foot-hint">点击进入详情 →</span>
+        </footer>
+      </article>`;
   }).join('');
 
   return `
     <div class="instances-page">
-      <p class="page-desc">每个游戏实例独立追踪。点击进入查看模组清单、变更历史与更新建议。</p>
-      ${INSTANCES.length ? cards : '<p class="empty-state">暂无实例。安装 Block Snap 客户端模组后启动游戏即可自动创建。</p>'}
+      <header class="instances-header">
+        <p class="page-desc">每个游戏实例独立追踪。可收藏常用实例、添加备注，点击进入查看资产与变更。</p>
+        <span class="instances-count">${list.length} 个实例</span>
+      </header>
+      ${list.length ? `<div class="instances-grid">${cards}</div>` : '<p class="empty-state">暂无实例。安装 Block Snap 客户端模组后启动游戏即可自动创建。</p>'}
     </div>`;
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 // ============================================================
@@ -253,7 +274,6 @@ function renderInstanceDetail(instanceId) {
   backPage = 'instances';
   const mp = getModpack(inst.boundModpackId);
   const latest = getLatestSnapshot(inst);
-  const drift = getConfigDriftSummary(inst);
 
   return `
     <div class="detail-page" data-instance="${inst.id}">
@@ -281,14 +301,6 @@ function renderInstanceDetail(instanceId) {
         </div>
       </div>
 
-      <!-- 配置漂移告警 -->
-      <div class="drift-alert" style="display:none">
-        <span class="drift-icon">⚠️</span>
-        <div>
-          <strong>配置漂移检测：</strong>功能开发中，敬请期待。
-        </div>
-      </div>
-
       <!-- 资产分类 Tab -->
       <div class="detail-tabs-bar">
         <button class="dtab active" data-asset-tab="mods">🧩 模组</button>
@@ -313,7 +325,7 @@ function renderInstanceDetail(instanceId) {
             <div class="placeholder-content">
               <span class="placeholder-icon">📜</span>
               <h2>配置文件</h2>
-              <p>配置漂移分析与版本对比功能开发中，敬请期待。</p>
+              <p>配置文件列表与版本对比功能开发中，敬请期待。</p>
               <span class="wip-badge">开发中</span>
             </div>
           </div>
@@ -378,43 +390,6 @@ function renderAssetTable(category, assets, instance) {
             <td class="muted">${a.note || '-'}</td>
             <td><span class="status-tag deleted">已移除</span></td>
             <td></td>
-          </tr>`).join('')}
-      </tbody>
-    </table>`;
-}
-
-function renderConfigTable(configs, instance, drift) {
-  if (!configs.length) return '<p class="empty-hint">暂无配置记录</p>';
-
-  const driftPaths = new Set((drift?.items || []).map((d) => d.path));
-
-  return `
-    <table class="asset-table">
-      <thead>
-        <tr>
-          <th>文件路径</th>
-          <th>关联模组</th>
-          <th>格式</th>
-          <th>添加时间</th>
-          <th>更新时间</th>
-          <th>大小</th>
-          <th>状态</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${configs.map((c) => `
-          <tr class="${driftPaths.has(c.relativePath) ? 'row-drift' : ''}">
-            <td><code>${c.relativePath}</code></td>
-            <td>${c.associatedModId || '-'}</td>
-            <td class="mono">.${c.format}</td>
-            <td class="muted mono" style="font-size:0.76rem">${formatDateTime(c.addedTime)}</td>
-            <td class="muted mono" style="font-size:0.76rem">${formatDateTime(c.updateTime)}</td>
-            <td class="mono">${(c.fileSize / 1024).toFixed(1)} KB</td>
-            <td>
-              ${driftPaths.has(c.relativePath)
-                ? '<span class="status-tag drift">⚠ 漂移</span>'
-                : '<span class="status-tag active">一致</span>'}
-            </td>
           </tr>`).join('')}
       </tbody>
     </table>`;
@@ -835,9 +810,69 @@ function bindPageEvents() {
   // Instance card clicks
   root.querySelectorAll('[data-instance]').forEach((card) => {
     card.addEventListener('click', (e) => {
-      if (e.target.closest('button') || e.target.closest('select')) return;
+      if (e.target.closest('button') || e.target.closest('select') || e.target.closest('input') || e.target.closest('[data-no-nav]')) return;
       activeInstanceId = card.dataset.instance;
       navigateTo('instance-detail', { id: card.dataset.instance });
+    });
+  });
+
+  // Instance favorite
+  root.querySelectorAll('[data-inst-fav]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.instFav;
+      const favorited = toggleInstanceFavorite(id);
+      btn.textContent = favorited ? '⭐' : '☆';
+      btn.classList.toggle('fav-active', favorited);
+      btn.setAttribute('aria-label', favorited ? '取消收藏' : '收藏实例');
+      btn.title = favorited ? '取消收藏' : '收藏';
+      const card = btn.closest('.instance-card');
+      card?.classList.toggle('instance-card-fav', favorited);
+      showToast(favorited ? '已加入收藏' : '已取消收藏');
+      // 收藏后重排列表
+      if (currentPage === 'instances') {
+        renderPage();
+        bindPageEvents();
+      }
+    });
+  });
+
+  // Add-note trigger (shown when instance has no note yet)
+  root.querySelectorAll('[data-note-add]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.noteAdd;
+      const card = btn.closest('.instance-card');
+      const noteRow = card?.querySelector('.instance-card-note');
+      if (!noteRow) return;
+      noteRow.classList.remove('hidden');
+      btn.style.display = 'none';
+      const input = noteRow.querySelector('.inst-note-input');
+      input?.focus();
+    });
+  });
+
+  // Instance note input
+  root.querySelectorAll('[data-inst-note]').forEach((input) => {
+    input.addEventListener('click', (e) => e.stopPropagation());
+    input.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') input.blur();
+    });
+    input.addEventListener('blur', () => {
+      const id = input.dataset.instNote;
+      const inst = getInstance(id);
+      if (!inst) return;
+      const prev = inst.note || '';
+      const next = input.value.trim();
+      if (next === prev) {
+        // 没有内容也没有改动：恢复为"添加备注"入口
+        if (!next && currentPage === 'instances') { renderPage(); bindPageEvents(); }
+        return;
+      }
+      setInstanceNote(id, next);
+      showToast(next ? '备注已保存' : '备注已清空');
+      if (currentPage === 'instances') { renderPage(); bindPageEvents(); }
     });
   });
 
@@ -854,18 +889,6 @@ function bindPageEvents() {
       const detailPage = btn.closest('.detail-page');
       if (detailPage) activeInstanceId = detailPage.dataset.instance;
       navigateTo('timeline');
-    });
-  });
-
-  // View drift
-  root.querySelectorAll('[data-action="view-drift"]').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const detailPage = btn.closest('.detail-page');
-      if (detailPage) activeInstanceId = detailPage.dataset.instance;
-      // Switch to configs tab
-      const configTab = root.querySelector('[data-asset-tab="configs"]');
-      if (configTab) configTab.click();
     });
   });
 

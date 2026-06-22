@@ -15,7 +15,7 @@ Account → Instance → Snapshot[] → 五类资产 (Mod/ResourcePack/ShaderPac
 
 | 页面 | 说明 |
 |------|------|
-| 我的实例 | 实例列表卡片，显示资产概要、更新提示、配置漂移告警 |
+| 我的实例 | 实例列表卡片，支持收藏与备注，显示资产概要、更新提示 |
 | 变更时间线 | 选实例，对比两次快照，五类资产的 ADD/REMOVE/UPDATE Diff |
 | 版本更新 | 聚合 CurseForge/Modrinth 的平台更新信息流，破坏性变更标记 |
 | MC 大事件 | 影响生态的重要事件时间线（版本发布/安全漏洞/模组里程碑） |
@@ -31,7 +31,7 @@ Account → Instance → Snapshot[] → 五类资产 (Mod/ResourcePack/ShaderPac
 - 每个实例 1-3 次快照历史
 - 8 条平台更新信息（含破坏性变更）
 - 6 条 MC 大事件（含安全漏洞）
-- 配置漂移检测 mock
+- 实例收藏与备注（演示数据，本地保存）
 
 ## 启动
 

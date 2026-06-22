@@ -771,88 +771,147 @@ body {
 /* Instance Cards */
 .instances-page {
   width: 100%;
-  max-width: 720px;
+  max-width: 760px;
   display: flex;
   flex-direction: column;
+  gap: 18px;
+}
+.instances-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
+}
+.instances-header .page-desc { margin: 0; flex: 1; min-width: 200px; }
+.instances-count {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(0,0,0,0.15);
+  white-space: nowrap;
+}
+.instances-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 .instance-card {
-  background: linear-gradient(180deg, rgba(127,183,77,0.06), rgba(0,0,0,0.18));
-  border: 2px solid var(--border);
-  border-radius: 6px;
-  padding: 16px 18px;
+  position: relative;
+  background: linear-gradient(180deg, rgba(127,183,77,0.05), rgba(0,0,0,0.16));
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 22px 24px;
   cursor: pointer;
   transition: border-color 0.18s, transform 0.12s, box-shadow 0.18s;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 3px 0 rgba(0,0,0,0.28);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.22);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 16px;
+}
+.instance-card-fav {
+  border-color: rgba(255,193,7,0.4);
+  background: linear-gradient(180deg, rgba(255,193,7,0.055), rgba(0,0,0,0.16));
 }
 .instance-card:hover {
   border-color: var(--mc-grass);
   transform: translateY(-2px);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 5px 0 rgba(0,0,0,0.32);
+  box-shadow: 0 8px 22px rgba(0,0,0,0.3);
 }
-.instance-card-header {
+.instance-card-fav:hover { border-color: rgba(255,193,7,0.6); }
+
+/* 收藏：右上角浮动 */
+.inst-fav-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, transform 0.1s;
+}
+.inst-fav-btn:hover {
+  background: rgba(255,193,7,0.1);
+  color: #ffc107;
+  transform: scale(1.12);
+}
+.inst-fav-btn.fav-active { color: #ffc107; }
+
+/* 标题 */
+.instance-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-right: 40px; /* 给收藏按钮留位 */
 }
 .instance-card-title {
-  font-size: 1.05rem;
-  font-weight: 600;
+  font-size: 1.18rem;
+  font-weight: 700;
   line-height: 1.3;
   margin: 0;
-  flex: 1;
   min-width: 0;
+  letter-spacing: 0.01em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.instance-card-stats {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-  padding: 6px 10px;
-  background: rgba(0,0,0,0.22);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-}
-.inst-stat { text-align: center; min-width: 40px; }
-.inst-stat-divider {
-  width: 1px;
-  height: 28px;
-  background: var(--border);
-  flex-shrink: 0;
-}
-.inst-stat-num { display: block; font-size: 1.1rem; font-weight: 700; color: var(--primary); line-height: 1.2; }
-.inst-stat-label { display: block; font-size: 0.62rem; color: var(--muted); margin-top: 1px; }
-.instance-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* 标签 */
+.instance-tags { display: flex; gap: 7px; flex-wrap: wrap; }
 .inst-tag {
-  font-size: 0.7rem;
-  padding: 3px 8px;
-  border-radius: 4px;
+  font-size: 0.72rem;
+  padding: 4px 10px;
+  border-radius: 5px;
   background: var(--surface2);
   color: var(--text);
   border: 1px solid var(--border);
   font-family: var(--mono);
-  opacity: 0.9;
+  opacity: 0.92;
 }
+
+/* 资产统计：横向均分一行 */
+.instance-card-stats {
+  display: flex;
+  align-items: stretch;
+  padding: 12px 6px;
+  background: rgba(0,0,0,0.2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.inst-stat { flex: 1; text-align: center; }
+.inst-stat-divider {
+  width: 1px;
+  align-self: center;
+  height: 30px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+.inst-stat-num { display: block; font-size: 1.4rem; font-weight: 700; color: var(--primary); line-height: 1.15; }
+.inst-stat-label { display: block; font-size: 0.68rem; color: var(--muted); margin-top: 3px; }
+
+/* 整合包 */
 .instance-card-modpack {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  background: rgba(0,0,0,0.15);
-  border: 1px solid rgba(255,255,255,0.04);
-  border-radius: 5px;
+  gap: 9px;
   min-width: 0;
 }
-.inst-mp-icon { font-size: 0.9rem; flex-shrink: 0; opacity: 0.85; }
+.inst-mp-icon { font-size: 1rem; flex-shrink: 0; opacity: 0.85; }
 .inst-mp-name {
-  font-size: 0.82rem;
+  font-size: 0.88rem;
   color: var(--text);
   flex: 1;
   min-width: 0;
@@ -861,40 +920,88 @@ body {
   text-overflow: ellipsis;
 }
 .inst-mp-platform {
-  font-size: 0.62rem;
+  font-size: 0.64rem;
   font-weight: 600;
   letter-spacing: 0.03em;
-  padding: 2px 7px;
-  border-radius: 3px;
+  padding: 3px 8px;
+  border-radius: 4px;
   background: var(--primary-dim);
   color: var(--primary);
   flex-shrink: 0;
 }
+
+/* 备注：有内容才显示 */
+.instance-card-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  background: rgba(0,0,0,0.14);
+  border-left: 3px solid rgba(255,193,7,0.4);
+  border-radius: 0 6px 6px 0;
+}
+.instance-card-note.hidden { display: none; }
+.inst-note-icon { font-size: 0.8rem; color: var(--muted); flex-shrink: 0; }
+.inst-note-input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.84rem;
+  padding: 4px 6px;
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+.inst-note-input::placeholder { color: var(--muted); opacity: 0.7; }
+.inst-note-input:hover { background: rgba(0,0,0,0.18); }
+.inst-note-input:focus {
+  outline: none;
+  border-color: var(--mc-grass);
+  background: rgba(0,0,0,0.26);
+  cursor: text;
+}
+
+/* 底部 */
 .instance-card-foot {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
   flex-wrap: wrap;
-  margin-top: 2px;
-  padding-top: 10px;
+  padding-top: 14px;
   border-top: 1px solid var(--border);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   color: var(--muted);
 }
-.inst-foot-meta { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .inst-foot-item { white-space: nowrap; }
-.inst-foot-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
-.inst-badge {
-  font-size: 0.66rem;
-  padding: 4px 9px;
+.inst-note-add {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 2px 4px;
   border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+.inst-note-add:hover { color: var(--primary); background: var(--primary-dim); }
+.inst-foot-hint {
+  margin-left: auto;
+  font-size: 0.72rem;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+.inst-badge {
+  font-size: 0.68rem;
+  padding: 4px 9px;
+  border-radius: 5px;
   font-weight: 600;
   white-space: nowrap;
 }
 .inst-badge.badge-update { background: var(--primary-dim); color: var(--primary); }
 .inst-badge.badge-critical { background: rgba(239,83,80,0.15); color: var(--danger); }
-.inst-badge.badge-drift { background: rgba(255,183,77,0.15); color: var(--warn); }
 
 /* Instance Detail */
 .detail-hero {
@@ -906,14 +1013,6 @@ body {
 }
 .detail-hero h2 { font-size: 1.25rem; margin-bottom: 8px; }
 .detail-hero-right { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-
-.drift-alert {
-  display: flex; align-items: center; gap: 12px;
-  background: rgba(255,183,77,0.08); border: 1px solid rgba(255,183,77,0.3);
-  border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 0.85rem;
-}
-.drift-icon { font-size: 1.2rem; flex-shrink: 0; }
-.drift-alert strong { display: block; margin-bottom: 2px; }
 
 /* Asset Tabs */
 .detail-tabs-bar {
@@ -955,12 +1054,8 @@ body {
 }
 .status-tag.active { background: rgba(124,179,66,0.15); color: var(--mod); }
 .status-tag.deleted { background: rgba(255,255,255,0.06); color: var(--muted); text-decoration: line-through; }
-.status-tag.drift { background: rgba(255,183,77,0.15); color: var(--warn); }
 
 .row-deleted td { opacity: 0.5; }
-.row-deleted strong { text-decoration: line-through; }
-.row-drift td { background: rgba(255,183,77,0.04); }
-.row-drift td:first-child { border-left: 3px solid var(--warn); }
 
 /* Snapshot picker */
 .snapshot-picker {
@@ -1234,10 +1329,9 @@ body {
 @media (max-width: 768px) {
   .settings-grid { grid-template-columns: 1fr; gap: 24px; }
   .settings-card { padding: 20px 18px; }
-  .instance-card-header { flex-direction: column; align-items: stretch; }
-  .instance-card-stats { justify-content: space-around; }
-  .instance-card-foot { flex-direction: column; align-items: flex-start; }
-  .inst-foot-badges { margin-left: 0; }
+  .instance-card { padding: 18px; }
+  .instance-card-foot { gap: 10px; }
+  .inst-foot-hint { margin-left: 0; }
   .diff-selector { flex-direction: column; gap: 8px; padding: 14px; }
   .diff-arrow { padding-top: 0; transform: rotate(90deg); }
   .event-card { padding: 14px; }

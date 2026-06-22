@@ -26,22 +26,6 @@ export const RISK_LEVEL = {
   DANGER:  { label: '破坏性变更', color: '#EF5350', icon: '🔴' },
 };
 
-// ── 配置基线 (供漂移分析) ──
-const CONFIG_BASELINES = {
-  'vanilla-plus': {
-    'config/sodium-options.json':  'abc123def_v3',
-    'config/iris.properties':      'ghi456jkl_v1',
-    'config/create-client.toml':   'mno789pqr_v2',
-    'config/journeymap.json':      'stu012vwx_v3',
-    'config/jei-client.ini':       'yza345bcd_v1',
-  },
-  'cobblemon': {
-    'config/cobblemon/main.json':           'cfg001',
-    'config/biomesoplenty/generation.toml': 'cfg002',
-    'config/sodium-options.json':           'cfg003',
-  },
-};
-
 // 平台更新中定义的各资产最新版本
 const LATEST_VERSION_MAP = {
   mod: {
@@ -90,7 +74,6 @@ export const MODPACKS = {
     version: '3.0.0',
     sourcePlatform: 'CURSEFORGE',
     description: '以原版体验为基础，加入 Create、JourneyMap 等轻量模组，适合长期生存。',
-    configBaseline: 'vanilla-plus',
     manifest: [
       { modId: 'sodium', version: '0.5.11' },
       { modId: 'lithium', version: '0.11.3' },
@@ -118,7 +101,6 @@ export const MODPACKS = {
     version: '1.4.0',
     sourcePlatform: 'MODRINTH',
     description: '以宝可梦模组 Cobblemon 为核心，加入生态群系与探索内容。',
-    configBaseline: 'cobblemon',
     manifest: [
       { modId: 'cobblemon', version: '1.5.2' },
       { modId: 'biomes-o-plenty', version: '18.0.0' },
@@ -143,6 +125,8 @@ export const INSTANCES = [
   {
     id: 'inst-001',
     name: 'Spark · 生存主世界',
+    favorited: true,
+    note: '周末开荒 · 长期生存',
     minecraftVersion: '1.21.1',
     loaderType: 'Fabric',
     loaderVersion: '0.16.5',
@@ -244,6 +228,8 @@ export const INSTANCES = [
   {
     id: 'inst-002',
     name: '腐竹测试服 · 客户端',
+    favorited: false,
+    note: '',
     minecraftVersion: '1.20.1',
     loaderType: 'Fabric',
     loaderVersion: '0.15.11',
@@ -578,41 +564,27 @@ export function computeSnapshotDiff(older, newer) {
   return diff;
 }
 
-/**
- * 检查配置文件漂移 (与整合包配置基线对比)
- */
-export function checkConfigDrift(instance) {
-  const mp = getModpack(instance.boundModpackId);
-  if (!mp || !mp.configBaseline) return [];
-
-  const latest = getLatestSnapshot(instance);
-  const configs = latest?.assets?.configs || [];
-  const baseline = CONFIG_BASELINES[mp.configBaseline] || {};
-
-  return configs
-    .filter((cfg) => {
-      const bHash = baseline[cfg.relativePath];
-      return bHash && bHash !== cfg.fileHash;
-    })
-    .map((cfg) => ({
-      path: cfg.relativePath,
-      baselineHash: baseline[cfg.relativePath],
-      currentHash: cfg.fileHash,
-      associatedModId: cfg.associatedModId,
-    }));
+/** 切换实例收藏状态 */
+export function toggleInstanceFavorite(instanceId) {
+  const inst = getInstance(instanceId);
+  if (!inst) return false;
+  inst.favorited = !inst.favorited;
+  return inst.favorited;
 }
 
-/**
- * 获取实例中配置漂移的资产摘要
- */
-export function getConfigDriftSummary(instance) {
-  const drifts = checkConfigDrift(instance);
-  if (drifts.length === 0) return null;
-  return {
-    count: drifts.length,
-    items: drifts,
-    modpackName: getModpack(instance.boundModpackId)?.name || '未知整合包',
-  };
+/** 更新实例备注 */
+export function setInstanceNote(instanceId, note) {
+  const inst = getInstance(instanceId);
+  if (!inst) return;
+  inst.note = (note || '').trim();
+}
+
+/** 实例列表：收藏优先 */
+export function getSortedInstances() {
+  return [...INSTANCES].sort((a, b) => {
+    if (a.favorited !== b.favorited) return a.favorited ? -1 : 1;
+    return a.name.localeCompare(b.name, 'zh-CN');
+  });
 }
 
 /**
