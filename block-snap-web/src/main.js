@@ -6,7 +6,7 @@ import {
   formatMs, formatDuration, pct,
   getInstance, getModpack, getLatestSnapshot,
   getInstanceAssetSummary, getPendingUpdateCount,
-  getSortedInstances, toggleInstanceFavorite, setInstanceNote,
+  getSortedInstances, toggleInstanceFavorite, setInstanceNote, setAssetNote,
   computeSnapshotDiff, getSeverityClass, getRiskClass,
 } from './mock-data.js';
 
@@ -15,6 +15,12 @@ let toastTimer = null;
 let currentPage = 'instances';
 let activeInstanceId = INSTANCES[0]?.id || null;
 let activeSnapshotIds = {}; // { instanceId: [snapIdA, snapIdB] } for diff
+let postLoginRedirect = null; // 'my-data' | null
+/** 'demo' = 本地 Mock；'live' = 登录后走后端 /svc-instance/list */
+let appMode = 'demo';
+let liveInstances = [];
+let instancesLoading = false;
+let instancesLoadError = null;
 
 // ── Utils ──
 function showToast(msg, type = 'success') {
@@ -106,6 +112,160 @@ function enterApp() {
 
 function enterLanding() {
   showScreen('landing');
+  updateAccountButton();
+}
+
+function goHome() {
+  postLoginRedirect = null;
+  enterLanding();
+}
+
+function enterDemoData() {
+  postLoginRedirect = null;
+  appMode = 'demo';
+  updateAppModeBadge();
+  enterApp();
+}
+
+async function enterMyData() {
+  postLoginRedirect = null;
+  appMode = 'live';
+  updateAppModeBadge();
+  const ok = await loadLiveInstances();
+  enterApp();
+  if (!ok && instancesLoadError) showToast(instancesLoadError, 'error');
+}
+
+async function loadLiveInstances() {
+  instancesLoading = true;
+  instancesLoadError = null;
+  try {
+    const r = await api.listInstances();
+    if (!isSuccess(r)) {
+      instancesLoadError = getMessage(r);
+      liveInstances = [];
+      return false;
+    }
+    liveInstances = (r.data || []).map(mapInstanceDtoToCard);
+    return true;
+  } catch {
+    instancesLoadError = '网络错误，请确认网关已启动';
+    liveInstances = [];
+    return false;
+  } finally {
+    instancesLoading = false;
+  }
+}
+
+/** 将后端 InstanceVO 转为卡片渲染用的统一结构（字段名与 VO 一致） */
+function mapInstanceDtoToCard(dto) {
+  return {
+    id: String(dto.id ?? ''),
+    name: dto.name || '未命名实例',
+    favorite: dto.favorite ?? 0,
+    note: dto.note || '',
+    updateCount: dto.updateCount ?? 0,
+    mcVersion: dto.mcVersion || '—',
+    isNewVersion: dto.isNewVersion === 1,
+    loaderType: formatLoaderLabel(dto.loaderType),
+    loaderVersion: dto.loaderVersion || '',
+    javaVersion: dto.javaVersion || '—',
+    modCount: dto.modCount ?? 0,
+    resourceCount: dto.resourceCount ?? 0,
+    shaderCount: dto.shaderCount ?? 0,
+    modpackName: dto.modpackName,
+    modpackVersion: dto.modpackVersion,
+    modpackPlatform: formatPlatformLabel(dto.modpackPlatform),
+    totalLoadMs: dto.totalLoadMs ?? 0,
+    lastLaunch: dto.lastLaunch ? String(dto.lastLaunch).replace('T', ' ') : null,
+    _live: true,
+  };
+}
+
+const LOADER_LABELS = { 1: 'Fabric', 2: 'Forge', 3: 'NeoForge', 4: 'Quilt' };
+const PLATFORM_LABELS = { 1: 'MODRINTH', 2: 'CURSEFORGE', 3: 'FTB', 4: 'TECHNIC' };
+
+function formatLoaderLabel(value) {
+  if (value == null || value === '') return '—';
+  const key = Number(value);
+  if (!Number.isNaN(key) && LOADER_LABELS[key]) return LOADER_LABELS[key];
+  return String(value);
+}
+
+function formatPlatformLabel(value) {
+  if (value == null || value === '') return '';
+  const key = Number(value);
+  if (!Number.isNaN(key) && PLATFORM_LABELS[key]) return PLATFORM_LABELS[key];
+  return String(value).toUpperCase();
+}
+
+function updateAppModeBadge() {
+  const badge = document.getElementById('app-mode-badge');
+  if (!badge) return;
+  if (appMode === 'live') {
+    badge.textContent = '我的数据';
+    badge.classList.add('live-badge');
+  } else {
+    badge.textContent = '演示数据';
+    badge.classList.remove('live-badge');
+  }
+}
+
+function getInstancesForCards() {
+  if (appMode === 'live') {
+    return [...liveInstances].sort((a, b) => {
+      const favA = a.favorite === 1;
+      const favB = b.favorite === 1;
+      if (favA !== favB) return favA ? -1 : 1;
+      return (a.name || '').localeCompare(b.name || '', 'zh-CN');
+    });
+  }
+  return getSortedInstances().map((inst) => {
+    const summary = getInstanceAssetSummary(inst);
+    const mp = getModpack(inst.boundModpackId);
+    return {
+      id: inst.id,
+      name: inst.name,
+      favorite: inst.favorited ? 1 : 0,
+      note: inst.note || '',
+      updateCount: getPendingUpdateCount(inst.id),
+      mcVersion: inst.minecraftVersion,
+      isNewVersion: false,
+      loaderType: inst.loaderType,
+      loaderVersion: inst.loaderVersion,
+      javaVersion: inst.javaVersion,
+      modCount: summary?.modCount || 0,
+      resourceCount: summary?.rpCount || 0,
+      shaderCount: summary?.spCount || 0,
+      modpackName: mp?.name,
+      modpackVersion: mp?.version,
+      modpackPlatform: mp?.sourcePlatform || '',
+      totalLoadMs: summary?.totalMs || 0,
+      lastLaunch: summary?.lastLaunch,
+      _live: false,
+    };
+  });
+}
+
+function toggleLiveInstanceFavorite(id) {
+  const inst = liveInstances.find((i) => i.id === String(id));
+  if (!inst) return false;
+  inst.favorite = inst.favorite === 1 ? 0 : 1;
+  return inst.favorite === 1;
+}
+
+function setLiveInstanceNote(id, note) {
+  const inst = liveInstances.find((i) => i.id === String(id));
+  if (!inst) return;
+  inst.note = (note || '').trim();
+}
+
+function requestMyData() {
+  if (isLoggedIn()) enterMyData();
+  else {
+    postLoginRedirect = 'my-data';
+    openAuthModal('login');
+  }
 }
 
 const DEMO_NAMES = [
@@ -124,10 +284,20 @@ function getDemoDisplayName() {
 }
 
 function updateAccountButton() {
-  const btn = document.getElementById('btn-account');
-  if (!btn) return;
-  const name = isLoggedIn() ? (getUsername() || '用户') : getDemoDisplayName();
-  btn.textContent = `欢迎回来，${name}`;
+  const loggedIn = isLoggedIn();
+  const name = loggedIn ? (getUsername() || '用户') : getDemoDisplayName();
+  const welcomeText = `欢迎回来，${name}`;
+
+  const appBtn = document.getElementById('btn-account');
+  if (appBtn) appBtn.textContent = welcomeText;
+
+  const landingBtn = document.getElementById('btn-landing-account');
+  const landingAuth = document.querySelector('.landing-auth-btns');
+  if (landingBtn) {
+    landingBtn.textContent = welcomeText;
+    landingBtn.classList.toggle('hidden', !loggedIn);
+  }
+  landingAuth?.classList.toggle('hidden', loggedIn);
 }
 
 // ── Navigation ──
@@ -162,6 +332,7 @@ function navigateTo(page, data) {
   }
 
   document.querySelector('.app-main')?.classList.toggle('app-main-centered', page === 'instances');
+  document.querySelector('.app-main')?.classList.toggle('app-main-detail', page === 'instance-detail');
 
   renderPage(data);
 }
@@ -179,57 +350,60 @@ function renderPage(data) {
     case 'settings':        el.innerHTML = renderSettings(); break;
   }
   bindPageEvents();
+  requestAnimationFrame(() => {
+    layoutAssetTables();
+    requestAnimationFrame(layoutAssetTables);
+  });
 }
 
 // ============================================================
 // Page: 我的实例
 // ============================================================
-function renderInstances() {
-  backPage = null;
-  const list = getSortedInstances();
-  const cards = list.map((inst) => {
-    const mp = getModpack(inst.boundModpackId);
-    const summary = getInstanceAssetSummary(inst);
-    const pending = getPendingUpdateCount(inst.id);
+function renderInstanceCard(inst) {
+  const hasNote = !!(inst.note && inst.note.trim());
+  const favorited = inst.favorite === 1;
+  const mpLabel = inst.modpackName
+    ? `${escapeHtml(inst.modpackName)}${inst.modpackVersion ? ` v${escapeHtml(inst.modpackVersion)}` : ''}`
+    : '无绑定整合包';
+  const loaderLabel = [inst.loaderType, inst.loaderVersion].filter((v) => v && v !== '—').join(' ');
 
-    const hasNote = !!(inst.note && inst.note.trim());
-
-    return `
-      <article class="instance-card${inst.favorited ? ' instance-card-fav' : ''}" data-instance="${inst.id}">
-        <button type="button" class="inst-fav-btn${inst.favorited ? ' fav-active' : ''}" data-inst-fav="${inst.id}" aria-label="${inst.favorited ? '取消收藏' : '收藏实例'}" title="${inst.favorited ? '取消收藏' : '收藏'}">${inst.favorited ? '★' : '☆'}</button>
+  return `
+      <article class="instance-card${favorited ? ' instance-card-fav' : ''}" data-instance="${inst.id}" data-live="${inst._live ? '1' : '0'}">
+        <button type="button" class="inst-fav-btn${favorited ? ' fav-active' : ''}" data-inst-fav="${inst.id}" aria-label="${favorited ? '取消收藏' : '收藏实例'}" title="${favorited ? '取消收藏' : '收藏'}">${favorited ? '★' : '☆'}</button>
 
         <div class="instance-card-head">
           <h3 class="instance-card-title">${escapeHtml(inst.name)}</h3>
-          ${pending > 0 ? `<span class="inst-badge badge-update">${pending} 项更新</span>` : ''}
+          ${inst.updateCount > 0 ? `<span class="inst-badge badge-update">${inst.updateCount} 项更新</span>` : ''}
+          ${inst.isNewVersion ? '<span class="inst-badge badge-new">有新版本</span>' : ''}
         </div>
 
         <div class="instance-tags">
-          <span class="inst-tag">${inst.minecraftVersion}</span>
-          <span class="inst-tag">${inst.loaderType} ${inst.loaderVersion}</span>
-          <span class="inst-tag">Java ${inst.javaVersion}</span>
+          <span class="inst-tag">${escapeHtml(inst.mcVersion)}</span>
+          <span class="inst-tag">${escapeHtml(loaderLabel || '—')}</span>
+          <span class="inst-tag">Java ${escapeHtml(inst.javaVersion)}</span>
         </div>
 
         <div class="instance-card-stats" aria-label="资产数量">
           <div class="inst-stat">
-            <span class="inst-stat-num">${summary?.modCount || 0}</span>
+            <span class="inst-stat-num">${inst.modCount}</span>
             <span class="inst-stat-label">模组</span>
           </div>
           <div class="inst-stat-divider" aria-hidden="true"></div>
           <div class="inst-stat">
-            <span class="inst-stat-num">${summary?.rpCount || 0}</span>
+            <span class="inst-stat-num">${inst.resourceCount}</span>
             <span class="inst-stat-label">资源包</span>
           </div>
           <div class="inst-stat-divider" aria-hidden="true"></div>
           <div class="inst-stat">
-            <span class="inst-stat-num">${summary?.spCount || 0}</span>
+            <span class="inst-stat-num">${inst.shaderCount}</span>
             <span class="inst-stat-label">光影</span>
           </div>
         </div>
 
         <div class="instance-card-modpack">
           <span class="inst-mp-icon" aria-hidden="true">📦</span>
-          <span class="inst-mp-name">${mp ? `${escapeHtml(mp.name)} v${mp.version}` : '无绑定整合包'}</span>
-          ${mp?.sourcePlatform ? `<span class="inst-mp-platform">${mp.sourcePlatform}</span>` : ''}
+          <span class="inst-mp-name">${mpLabel}</span>
+          ${inst.modpackPlatform ? `<span class="inst-mp-platform">${escapeHtml(inst.modpackPlatform)}</span>` : ''}
         </div>
 
         <div class="instance-card-note${hasNote ? '' : ' hidden'}" data-no-nav>
@@ -238,21 +412,41 @@ function renderInstances() {
         </div>
 
         <footer class="instance-card-foot">
-          <span class="inst-foot-item">🕐 ${summary?.lastLaunch ? summary.lastLaunch.slice(5, 16) : '暂无启动记录'}</span>
-          <span class="inst-foot-item">⏱️ ${formatDuration(summary?.totalMs || 0)}</span>
+          <span class="inst-foot-item">🕐 ${inst.lastLaunch ? inst.lastLaunch.slice(5, 16) : '暂无启动记录'}</span>
+          <span class="inst-foot-item">⏱️ ${formatDuration(inst.totalLoadMs || 0)}</span>
           ${hasNote ? '' : `<button type="button" class="inst-note-add" data-note-add="${inst.id}" data-no-nav>✎ 添加备注</button>`}
           <span class="inst-foot-hint">点击进入详情 →</span>
         </footer>
       </article>`;
-  }).join('');
+}
+
+function renderInstances() {
+  backPage = null;
+
+  let list = [];
+  let bodyHtml;
+
+  if (appMode === 'live' && instancesLoading) {
+    bodyHtml = '<p class="empty-state">正在加载你的实例…</p>';
+  } else {
+    list = getInstancesForCards();
+    if (list.length > 0) {
+      bodyHtml = `<div class="instances-grid">${list.map(renderInstanceCard).join('')}</div>`;
+    } else if (appMode === 'live' && instancesLoadError) {
+      bodyHtml = `
+        <p class="empty-state">暂无实例</p>
+        <div class="instances-state">
+          <p>${escapeHtml(instancesLoadError)}</p>
+          <button type="button" class="btn btn-primary btn-sm" data-reload-instances>重新加载</button>
+        </div>`;
+    } else {
+      bodyHtml = '<p class="empty-state">暂无实例</p>';
+    }
+  }
 
   return `
     <div class="instances-page">
-      <header class="instances-header">
-        <p class="page-desc">每个游戏实例独立追踪。可收藏常用实例、添加备注，点击进入查看资产与变更。</p>
-        <span class="instances-count">${list.length} 个实例</span>
-      </header>
-      ${list.length ? `<div class="instances-grid">${cards}</div>` : '<p class="empty-state">暂无实例。安装 Block Snap 客户端模组后启动游戏即可自动创建。</p>'}
+      ${bodyHtml}
     </div>`;
 }
 
@@ -281,17 +475,17 @@ function renderInstanceDetail(instanceId) {
       <!-- 实例信息头 -->
       <div class="detail-hero">
         <div class="detail-hero-left">
-          <h2>${inst.name}</h2>
+          <h2>${escapeHtml(inst.name)}</h2>
           <div class="instance-tags">
             <span class="inst-tag">${inst.minecraftVersion}</span>
             <span class="inst-tag">${inst.loaderType} ${inst.loaderVersion}</span>
             <span class="inst-tag">Java ${inst.javaVersion}</span>
             <span class="inst-tag">${inst.ramAllocated}</span>
           </div>
-          <p class="inst-mp">📦 整合包：${mp ? `${mp.name} v${mp.version}` : '无'} · 创建于 ${inst.createdAt}</p>
+          <p class="inst-mp">📦 ${mp ? `${escapeHtml(mp.name)} v${mp.version}` : '无绑定整合包'}<span class="inst-mp-sep">·</span>创建于 ${inst.createdAt}</p>
         </div>
         <div class="detail-hero-right">
-          <button class="btn btn-primary btn-sm" data-action="view-diff">查看最新变更</button>
+          <button class="btn btn-soft btn-sm" data-action="view-diff">查看最新变更</button>
           <select class="snapshot-picker" data-snapshot-picker>
             ${inst.snapshots.map((s, i) => `
               <option value="${s.id}" ${i === 0 ? 'selected' : ''}>
@@ -334,6 +528,109 @@ function renderInstanceDetail(instanceId) {
     </div>`;
 }
 
+function formatDateShort(dt) {
+  if (!dt) return '—';
+  return dt.length >= 10 ? dt.slice(0, 10) : dt;
+}
+
+function renderAssetNoteCell(a, category, instance, readonly = false, noteCol = 5) {
+  const key = escapeHtml(a.id || a.relativePath || '');
+  const note = a.note?.trim() || '';
+  if (readonly) {
+    return `<div class="asset-core-col asset-col-note" data-col="${noteCol}"><span class="asset-note-readonly">${note ? escapeHtml(note) : '—'}</span></div>`;
+  }
+  return `
+    <div class="asset-core-col asset-col-note" data-col="${noteCol}" data-no-nav>
+      <input type="text" class="asset-note-input${note ? ' has-value' : ''}"
+        data-asset-note="${key}" data-asset-cat="${category}" data-asset-inst="${instance.id}"
+        value="${escapeHtml(note)}" placeholder="添加备注…" maxlength="120" autocomplete="off">
+    </div>`;
+}
+
+function renderAssetFavCell(a, category, instance, deleted = false, favCol = 6) {
+  if (deleted) {
+    return `<div class="asset-core-col asset-col-fav" data-col="${favCol}"></div>`;
+  }
+  const favId = escapeHtml(a.id || a.relativePath || '');
+  return `
+    <div class="asset-core-col asset-col-fav" data-col="${favCol}">
+      <button type="button" class="asset-fav-btn${a.favorited ? ' fav-active' : ''}"
+        data-fav="${favId}" data-fav-cat="${category}" data-fav-inst="${instance.id}"
+        aria-label="${a.favorited ? '取消收藏' : '收藏'}">${a.favorited ? '★' : '☆'}</button>
+    </div>`;
+}
+
+function renderAssetVerCell(a) {
+  const versionText = a?.version ? String(a.version) : '—';
+
+  // Back-end field `IsNewVersion` semantics may differ from our previous `latestVersion` compare.
+  // We try to infer the meaning using `latestVersion` when available; otherwise we fall back to "true=hasNew".
+  const hasNewByCompare = Boolean(a.latestVersion && a.latestVersion !== a.version);
+  let isLatest;
+  if (typeof a?.IsNewVersion === 'boolean') {
+    if (a.latestVersion != null) {
+      if (hasNewByCompare === a.IsNewVersion) isLatest = !a.IsNewVersion;       // true => has new
+      else if (hasNewByCompare === !a.IsNewVersion) isLatest = a.IsNewVersion; // true => already latest
+      else isLatest = !a.IsNewVersion; // fallback: assume true => has new
+    } else {
+      isLatest = !a.IsNewVersion; // fallback when we don't have latestVersion info
+    }
+  } else {
+    // If back-end doesn't provide `IsNewVersion`, use our previous compare logic.
+    isLatest = !hasNewByCompare;
+  }
+
+  const tooltipText = isLatest ? '已最新' : '可更新';
+  return `
+    <span class="ver-cell${isLatest ? ' ver-latest' : ' ver-update'}" tabindex="0" role="group" aria-label="版本状态">
+      <span class="mono ver-text">${escapeHtml(versionText)}</span>
+      <span class="ver-tooltip">${tooltipText}</span>
+    </span>`;
+}
+
+function layoutAssetTable(wrap) {
+  const headCore = wrap.querySelector('.asset-table-head .asset-row-core');
+  if (!headCore) return;
+
+  const row = headCore.parentElement;
+  const cols = [...headCore.querySelectorAll('[data-col]')];
+  const colCount = cols.length;
+  if (!colCount) return;
+
+  const favBtn = wrap.querySelector('.asset-col-fav .asset-fav-btn');
+  const favW = favBtn ? Math.ceil(favBtn.getBoundingClientRect().width) : 30;
+
+  const widths = cols.map((col) => {
+    const i = col.dataset.col;
+    if (col.classList.contains('asset-col-fav')) return favW;
+    let max = 0;
+    wrap.querySelectorAll(`[data-col="${i}"]`).forEach((cell) => {
+      cell.style.width = 'auto';
+      max = Math.max(max, cell.scrollWidth);
+    });
+    return Math.ceil(max);
+  });
+
+  const noteIdx = cols.findIndex((c) => c.classList.contains('asset-col-note'));
+  if (noteIdx >= 0) widths[noteIdx] = Math.max(widths[noteIdx], 140);
+
+  const sum = widths.reduce((a, b) => a + b, 0);
+  const rowWidth = row?.clientWidth ?? headCore.clientWidth;
+  // 行宽扣除各列内容后均分为 (列数+1) 段：左留白、列间（含备注→收藏）、收藏右留白，三段等宽
+  const gap = Math.max(0, Math.floor((rowWidth - sum) / (colCount + 1)));
+
+  wrap.style.setProperty('--asset-grid-cols', widths.map((w) => `${w}px`).join(' '));
+  wrap.style.setProperty('--asset-grid-gap', `${gap}px`);
+}
+
+function layoutAssetTables() {
+  document.querySelectorAll('.asset-table-wrap').forEach((wrap) => {
+    const panel = wrap.closest('.asset-panel');
+    if (panel && !panel.classList.contains('active')) return;
+    layoutAssetTable(wrap);
+  });
+}
+
 function renderAssetTable(category, assets, instance) {
   const active = assets.filter((a) => !a.isDelete);
   const deleted = assets.filter((a) => a.isDelete);
@@ -343,56 +640,65 @@ function renderAssetTable(category, assets, instance) {
   }
 
   const isMod = category === 'mods';
-  const isConfig = category === 'configs';
 
-  function verCell(a) {
-    if (isConfig) return '<td class="mono muted">—</td>';
-    const notLatest = a.latestVersion && a.latestVersion !== a.version;
-    if (notLatest) {
-      return `<td><span class="mono ver-outdated">${a.version}</span><span class="ver-hint">新版本 ${a.latestVersion}</span></td>`;
-    }
-    return `<td><span class="mono ver-ok">${a.version}</span>${a.latestVersion ? '<span class="ver-hint latest">已最新</span>' : ''}</td>`;
-  }
+  const noteCol = isMod ? 5 : 4;
+  const favCol = isMod ? 6 : 5;
+
+  const headCoreCols = isMod
+    ? `
+        <div class="asset-core-col" data-col="0"><span class="asset-head-label">名称</span></div>
+        <div class="asset-core-col" data-col="1"><span class="asset-head-label">版本</span></div>
+        <div class="asset-core-col" data-col="2"><span class="asset-head-label">加载耗时</span></div>
+        <div class="asset-core-col asset-col-created" data-col="3"><span class="asset-head-label">创建时间</span></div>
+        <div class="asset-core-col" data-col="4"><span class="asset-head-label">更新时间</span></div>
+        <div class="asset-core-col asset-col-note" data-col="5"><span class="asset-head-label">备注</span></div>
+        <div class="asset-core-col asset-col-fav" data-col="6"><span class="sr-only">收藏</span></div>`
+    : `
+        <div class="asset-core-col" data-col="0"><span class="asset-head-label">名称</span></div>
+        <div class="asset-core-col" data-col="1"><span class="asset-head-label">版本</span></div>
+        <div class="asset-core-col asset-col-created" data-col="2"><span class="asset-head-label">创建时间</span></div>
+        <div class="asset-core-col" data-col="3"><span class="asset-head-label">更新时间</span></div>
+        <div class="asset-core-col asset-col-note" data-col="4"><span class="asset-head-label">备注</span></div>
+        <div class="asset-core-col asset-col-fav" data-col="5"><span class="sr-only">收藏</span></div>`;
+
+  const activeRows = active.map((a) => `
+    <div class="asset-row">
+      <div class="asset-row-core">
+        <div class="asset-core-col asset-col-name" data-col="0"><span class="asset-name-text">${escapeHtml(a.name || a.relativePath)}</span></div>
+        <div class="asset-core-col asset-col-ver" data-col="1">${renderAssetVerCell(a)}</div>
+        ${isMod ? `<div class="asset-core-col asset-col-load mono" data-col="2">${a.loadTimeMs ? formatMs(a.loadTimeMs) : '—'}</div>` : ''}
+        <div class="asset-core-col asset-col-time asset-col-created mono" data-col="${isMod ? 3 : 2}">${formatDateShort(a.addedTime)}</div>
+        <div class="asset-core-col asset-col-time mono" data-col="${isMod ? 4 : 3}">${formatDateShort(a.updateTime)}</div>
+        ${renderAssetNoteCell(a, category, instance, false, noteCol)}
+        ${renderAssetFavCell(a, category, instance, false, favCol)}
+      </div>
+    </div>`).join('');
+
+  const deletedRows = deleted.length ? `
+    <div class="asset-section-row">已移除 · ${deleted.length}</div>
+    ${deleted.map((a) => `
+      <div class="asset-row row-deleted">
+        <div class="asset-row-core">
+          <div class="asset-core-col asset-col-name" data-col="0"><span class="asset-name-text">${escapeHtml(a.name || a.relativePath)}</span></div>
+          <div class="asset-core-col asset-col-ver mono muted" data-col="1">${escapeHtml(a.version || '—')}</div>
+          ${isMod ? '<div class="asset-core-col asset-col-load muted" data-col="2">—</div>' : ''}
+          <div class="asset-core-col asset-col-time asset-col-created mono muted" data-col="${isMod ? 3 : 2}">${formatDateShort(a.addedTime)}</div>
+          <div class="asset-core-col asset-col-time mono muted" data-col="${isMod ? 4 : 3}">${formatDateShort(a.updateTime)}</div>
+          ${renderAssetNoteCell(a, category, instance, true, noteCol)}
+          ${renderAssetFavCell(a, category, instance, true, favCol)}
+        </div>
+      </div>`).join('')}` : '';
 
   return `
-    <table class="asset-table">
-      <thead>
-        <tr>
-          <th style="width:20%">名称</th>
-          <th style="width:14%">当前版本</th>
-          <th style="width:11%">添加时间</th>
-          <th style="width:11%">更新时间</th>
-          ${isMod ? '<th style="width:8%">加载耗时</th>' : ''}
-          <th style="width:14%">备注</th>
-          <th style="width:6%">状态</th>
-          <th style="width:5%">收藏</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${active.map((a) => `
-          <tr class="${a.slow ? 'row-slow' : ''}">
-            <td><strong>${a.name || a.relativePath}</strong></td>
-            ${verCell(a)}
-            <td class="muted mono" style="font-size:0.76rem">${formatDateTime(a.addedTime)}</td>
-            <td class="muted mono" style="font-size:0.76rem">${formatDateTime(a.updateTime)}</td>
-            ${isMod ? `<td class="mono">${a.loadTimeMs ? formatMs(a.loadTimeMs) : '-'}</td>` : ''}
-            <td class="muted">${a.note || '-'}</td>
-            <td><span class="status-tag active">活跃</span></td>
-            <td><button class="fav-btn ${a.favorited ? 'fav-active' : ''}" data-fav="${a.id || a.relativePath}" data-fav-cat="${category}" data-fav-inst="${instance.id}">${a.favorited ? '⭐' : '☆'}</button></td>
-          </tr>`).join('')}
-        ${deleted.map((a) => `
-          <tr class="row-deleted">
-            <td><strong>${a.name}</strong></td>
-            <td class="mono">${a.version}</td>
-            <td class="muted mono" style="font-size:0.76rem">${formatDateTime(a.addedTime)}</td>
-            <td class="muted mono" style="font-size:0.76rem">${formatDateTime(a.updateTime)}</td>
-            ${isMod ? '<td class="mono">-</td>' : ''}
-            <td class="muted">${a.note || '-'}</td>
-            <td><span class="status-tag deleted">已移除</span></td>
-            <td></td>
-          </tr>`).join('')}
-      </tbody>
-    </table>`;
+    <div class="asset-table-wrap">
+      <div class="asset-table${isMod ? '' : ' asset-table-no-load'}">
+        <div class="asset-row asset-table-head">
+          <div class="asset-row-core">${headCoreCols}</div>
+        </div>
+        <div class="asset-table-body">${activeRows}${deletedRows}</div>
+      </div>
+      <p class="asset-table-foot">${active.length} 项活跃${deleted.length ? ` · ${deleted.length} 项已移除` : ''}</p>
+    </div>`;
 }
 
 // ── Format datetime (年月日 时分秒) ──
@@ -766,7 +1072,7 @@ function renderSettings() {
                 <label class="flex-grow"><span>验证码</span><input name="verificationCode" data-code-input="account" /></label>
                 <button type="button" class="btn btn-secondary code-btn" data-scene="verify-account" data-target="account">获取验证码</button>
               </div>
-              <button type="submit" class="btn btn-primary">验证</button>
+              <button type="submit" class="btn btn-soft">验证</button>
             </form>
           </section>
           <section class="settings-section">
@@ -775,7 +1081,7 @@ function renderSettings() {
               <label><span>原密码</span><input name="oldPassword" type="password" required /></label>
               <label><span>新密码</span><input name="newPassword" type="password" required /></label>
               <label><span>确认</span><input name="confirmNewPassword" type="password" required /></label>
-              <button type="submit" class="btn btn-primary">修改</button>
+              <button type="submit" class="btn btn-soft">修改</button>
             </form>
           </section>
         </div>
@@ -788,7 +1094,7 @@ function renderSettings() {
               <label class="flex-grow"><span>验证码</span><input name="verificationCode" data-code-input="account" /></label>
               <button type="button" class="btn btn-secondary code-btn" data-scene="bind-account" data-target="account">获取验证码</button>
             </div>
-            <button type="submit" class="btn btn-primary">绑定</button>
+            <button type="submit" class="btn btn-soft">绑定</button>
           </form>
         </section>
         <div class="settings-divider"></div>
@@ -811,25 +1117,60 @@ function bindPageEvents() {
   root.querySelectorAll('[data-instance]').forEach((card) => {
     card.addEventListener('click', (e) => {
       if (e.target.closest('button') || e.target.closest('select') || e.target.closest('input') || e.target.closest('[data-no-nav]')) return;
+      if (card.dataset.live === '1') {
+        showToast('云端实例详情页开发中', 'error');
+        return;
+      }
       activeInstanceId = card.dataset.instance;
       navigateTo('instance-detail', { id: card.dataset.instance });
     });
   });
 
+  root.querySelectorAll('[data-reload-instances]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      await loadLiveInstances();
+      renderPage();
+    });
+  });
+
   // Instance favorite
   root.querySelectorAll('[data-inst-fav]').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const id = btn.dataset.instFav;
+      const isLive = btn.closest('[data-live="1"]');
+      if (isLive) {
+        const inst = liveInstances.find((i) => i.id === String(id));
+        if (!inst) return;
+        const nextFav = inst.favorite === 1 ? 0 : 1;
+        const result = await api.updateInstanceFavorite(Number(id), nextFav);
+        if (!isSuccess(result)) {
+          showToast(getMessage(result), 'error');
+          return;
+        }
+        inst.favorite = nextFav;
+        const favorited = inst.favorite === 1;
+        showToast(favorited ? '已加入收藏' : '已取消收藏');
+        btn.textContent = favorited ? '★' : '☆';
+        btn.classList.toggle('fav-active', favorited);
+        btn.setAttribute('aria-label', favorited ? '取消收藏' : '收藏实例');
+        btn.title = favorited ? '取消收藏' : '收藏';
+        const card = btn.closest('.instance-card');
+        card?.classList.toggle('instance-card-fav', favorited);
+        if (currentPage === 'instances') {
+          renderPage();
+          bindPageEvents();
+        }
+        return;
+      }
       const favorited = toggleInstanceFavorite(id);
-      btn.textContent = favorited ? '⭐' : '☆';
+      showToast(favorited ? '已加入收藏' : '已取消收藏');
+      btn.textContent = favorited ? '★' : '☆';
       btn.classList.toggle('fav-active', favorited);
       btn.setAttribute('aria-label', favorited ? '取消收藏' : '收藏实例');
       btn.title = favorited ? '取消收藏' : '收藏';
       const card = btn.closest('.instance-card');
       card?.classList.toggle('instance-card-fav', favorited);
-      showToast(favorited ? '已加入收藏' : '已取消收藏');
-      // 收藏后重排列表
       if (currentPage === 'instances') {
         renderPage();
         bindPageEvents();
@@ -859,19 +1200,30 @@ function bindPageEvents() {
       e.stopPropagation();
       if (e.key === 'Enter') input.blur();
     });
-    input.addEventListener('blur', () => {
+    input.addEventListener('blur', async () => {
       const id = input.dataset.instNote;
-      const inst = getInstance(id);
+      const isLive = input.closest('[data-live="1"]');
+      const inst = isLive ? liveInstances.find((i) => i.id === String(id)) : getInstance(id);
       if (!inst) return;
       const prev = inst.note || '';
       const next = input.value.trim();
       if (next === prev) {
-        // 没有内容也没有改动：恢复为"添加备注"入口
         if (!next && currentPage === 'instances') { renderPage(); bindPageEvents(); }
         return;
       }
-      setInstanceNote(id, next);
-      showToast(next ? '备注已保存' : '备注已清空');
+      if (isLive) {
+        const result = await api.updateInstanceNote(Number(id), next);
+        if (!isSuccess(result)) {
+          input.value = prev;
+          showToast(getMessage(result), 'error');
+          return;
+        }
+        setLiveInstanceNote(id, next);
+        showToast(next ? '备注已保存' : '备注已清空');
+      } else {
+        setInstanceNote(id, next);
+        showToast(next ? '备注已保存' : '备注已清空');
+      }
       if (currentPage === 'instances') { renderPage(); bindPageEvents(); }
     });
   });
@@ -901,6 +1253,7 @@ function bindPageEvents() {
       root.querySelectorAll('[data-asset-panel]').forEach((p) => {
         p.classList.toggle('active', p.dataset.assetPanel === cat);
       });
+      requestAnimationFrame(() => layoutAssetTables());
     });
   });
 
@@ -943,7 +1296,56 @@ function bindPageEvents() {
     });
   });
 
-  // Favorite toggle
+  // Asset note input
+  root.querySelectorAll('[data-asset-note]').forEach((input) => {
+    input.addEventListener('click', (e) => e.stopPropagation());
+    input.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') input.blur();
+    });
+    input.addEventListener('input', () => {
+      input.classList.toggle('has-value', !!input.value.trim());
+    });
+    input.addEventListener('blur', () => {
+      const instId = input.dataset.assetInst;
+      const cat = input.dataset.assetCat;
+      const key = input.dataset.assetNote;
+      const inst = getInstance(instId);
+      if (!inst) return;
+      const latest = getLatestSnapshot(inst);
+      const asset = latest?.assets?.[cat]?.find((a) => (a.id || a.relativePath) === key);
+      const prev = asset?.note || '';
+      const next = input.value.trim();
+      if (next === prev) return;
+      setAssetNote(instId, cat, key, next);
+      showToast(next ? '备注已保存' : '备注已清空');
+    });
+  });
+
+  // Favorite toggle (asset table)
+  root.querySelectorAll('.asset-fav-btn').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const favId = btn.dataset.fav;
+      const favCat = btn.dataset.favCat;
+      const favInst = btn.dataset.favInst;
+      const inst = getInstance(favInst);
+      if (!inst) return;
+      const latest = getLatestSnapshot(inst);
+      if (!latest) return;
+      const assets = latest.assets[favCat] || [];
+      const asset = assets.find((a) => (a.id || a.relativePath) === favId);
+      if (asset) {
+        asset.favorited = !asset.favorited;
+        btn.textContent = asset.favorited ? '★' : '☆';
+        btn.classList.toggle('fav-active', asset.favorited);
+        btn.setAttribute('aria-label', asset.favorited ? '取消收藏' : '收藏');
+        showToast(asset.favorited ? '已收藏' : '已取消收藏');
+      }
+    });
+  });
+
+  // Legacy fav-btn (if any remain)
   root.querySelectorAll('.fav-btn').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -963,6 +1365,32 @@ function bindPageEvents() {
         showToast(asset.favorited ? '已收藏' : '已取消收藏');
       }
     });
+  });
+
+  // Version hover: for "已最新" only, wait 0.6s then show tooltip.
+  // For "可更新", tooltip is always visible via CSS.
+  const latestCells = root.querySelectorAll('.ver-cell.ver-latest');
+  const latestTimers = new Map();
+  latestCells.forEach((cell) => {
+    const clear = () => {
+      const t = latestTimers.get(cell);
+      if (t) clearTimeout(t);
+      latestTimers.delete(cell);
+      cell.classList.remove('ver-hover', 'ver-tooltip-show');
+    };
+    const schedule = () => {
+      cell.classList.add('ver-hover');
+      const prev = latestTimers.get(cell);
+      if (prev) clearTimeout(prev);
+      latestTimers.set(cell, setTimeout(() => {
+        cell.classList.add('ver-tooltip-show');
+      }, 600));
+    };
+
+    cell.addEventListener('mouseenter', schedule);
+    cell.addEventListener('mouseleave', clear);
+    cell.addEventListener('focus', schedule);
+    cell.addEventListener('blur', clear);
   });
 
   // Settings forms
@@ -1068,7 +1496,15 @@ function setupAuth() {
         showToast(getMessage(r));
         closeAuthModal();
         updateAccountButton();
-        enterApp();
+        if (postLoginRedirect === 'my-data') {
+          postLoginRedirect = null;
+          await enterMyData();
+        } else {
+          appMode = isLoggedIn() ? 'live' : 'demo';
+          updateAppModeBadge();
+          if (appMode === 'live') await loadLiveInstances();
+          enterApp();
+        }
       } else showToast(getMessage(r), 'error');
     } catch { showToast('网络错误，请确认网关已启动', 'error'); }
   });
@@ -1101,23 +1537,47 @@ function setupAuth() {
 async function handleLogout() {
   try { if (isLoggedIn()) await api.logout(); } catch { /* ignore */ }
   clearAuth();
+  appMode = 'demo';
+  liveInstances = [];
+  instancesLoadError = null;
   showToast('已退出');
   enterLanding();
 }
 
 function setupApp() {
-  // Landing page demo buttons
+  document.querySelectorAll('[data-go-home]').forEach((el) => {
+    el.addEventListener('click', goHome);
+  });
+
   document.querySelectorAll('[data-demo="report"]').forEach((btn) => {
-    btn.addEventListener('click', () => enterApp());
+    btn.addEventListener('click', () => enterDemoData());
+  });
+
+  document.querySelectorAll('[data-action="my-data"]').forEach((btn) => {
+    btn.addEventListener('click', () => requestMyData());
   });
 
   document.querySelectorAll('.nav-item[data-page]').forEach((btn) => {
-    btn.addEventListener('click', () => navigateTo(btn.dataset.page));
+    btn.addEventListener('click', async () => {
+      if (btn.dataset.page === 'instances' && appMode === 'live') {
+        await loadLiveInstances();
+      }
+      navigateTo(btn.dataset.page);
+    });
   });
 
   document.getElementById('btn-account').addEventListener('click', () => {
     if (isLoggedIn()) navigateTo('settings');
     else openAuthModal('login');
+  });
+
+  document.getElementById('btn-landing-account')?.addEventListener('click', async () => {
+    if (!isLoggedIn()) {
+      openAuthModal('login');
+      return;
+    }
+    await enterMyData();
+    navigateTo('settings');
   });
 
   // Logout from settings page (delegated)
@@ -1130,18 +1590,25 @@ function setupApp() {
   window.addEventListener('auth:logout', () => {
     showToast('登录已过期', 'error');
     enterLanding();
+    updateAccountButton();
+  });
+
+  let assetLayoutTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(assetLayoutTimer);
+    assetLayoutTimer = setTimeout(layoutAssetTables, 120);
   });
 }
 
 // ============================================================
 // Init
 // ============================================================
-function init() {
+async function init() {
   setupAuth();
   setupApp();
 
   if (isLoggedIn()) {
-    enterApp();
+    await enterMyData();
   } else {
     enterLanding();
   }

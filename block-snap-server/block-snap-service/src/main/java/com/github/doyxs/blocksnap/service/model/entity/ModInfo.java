@@ -3,11 +3,15 @@ package com.github.doyxs.blocksnap.service.model.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 @TableName("mod_info")
 public class ModInfo {
 
@@ -16,9 +20,11 @@ public class ModInfo {
 
     private String name;
 
-    private String sourcePlatform;
+    private String hash;
 
-    private String latestVersion;
+    private Integer platform;
+
+    private String version;
 
     private LocalDateTime createTime;
 

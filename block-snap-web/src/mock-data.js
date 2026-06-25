@@ -57,10 +57,13 @@ function enrichAsset(asset, category) {
   if (!catKey) return asset;
   const verMap = LATEST_VERSION_MAP[catKey] || {};
   const favSet = new Set(FAVORITED_PRESET[catKey] || []);
+  const latestVersion = verMap[asset.name] || null;
   return {
     ...asset,
-    latestVersion: verMap[asset.name] || null,
+    latestVersion,
     favorited: favSet.has(asset.name),
+    // Back-end field: true => there is a newer version available (i.e. "可更新")
+    IsNewVersion: latestVersion != null ? latestVersion !== asset.version : false,
   };
 }
 
@@ -577,6 +580,16 @@ export function setInstanceNote(instanceId, note) {
   const inst = getInstance(instanceId);
   if (!inst) return;
   inst.note = (note || '').trim();
+}
+
+/** 更新资产备注（最新快照） */
+export function setAssetNote(instanceId, category, assetKey, note) {
+  const inst = getInstance(instanceId);
+  if (!inst) return;
+  const latest = getLatestSnapshot(inst);
+  if (!latest?.assets?.[category]) return;
+  const asset = latest.assets[category].find((a) => (a.id || a.relativePath) === assetKey);
+  if (asset) asset.note = (note || '').trim();
 }
 
 /** 实例列表：收藏优先 */

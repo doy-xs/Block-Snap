@@ -1,8 +1,6 @@
 package com.github.doyxs.blocksnap.system.controller;
 
 import com.github.doyxs.blocksnap.common.api.Result;
-import com.github.doyxs.blocksnap.common.constant.RedisConst;
-import com.github.doyxs.blocksnap.common.constant.SceneConst;
 import com.github.doyxs.blocksnap.common.utils.IpUtils;
 import com.github.doyxs.blocksnap.system.model.dto.*;
 import com.github.doyxs.blocksnap.system.service.ISysUserService;
@@ -59,4 +57,6 @@ public class SysUserController {
     public Result<String> bindAccount(@RequestHeader("X-User-Id") Long userId, @RequestBody BindAccountDTO bindAccountDTO) {
         return sysUserService.bindAccount(userId, bindAccountDTO);
     }
+
+   
 }

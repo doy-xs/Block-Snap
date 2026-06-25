@@ -18,13 +18,16 @@
     <!-- 落地页 -->
     <div id="screen-landing" class="screen">
       <header class="landing-header">
-        <div class="brand">
+        <button type="button" class="brand brand-home" data-go-home aria-label="返回主页">
           <span class="brand-block"></span>
           <span class="brand-name">Block Snap</span>
-        </div>
+        </button>
         <div class="landing-actions">
-          <button class="btn btn-ghost" data-auth="login">登录</button>
-          <button class="btn btn-primary" data-auth="register">注册</button>
+          <button type="button" class="btn btn-ghost hidden" id="btn-landing-account">欢迎回来</button>
+          <div class="landing-auth-btns">
+            <button class="btn btn-ghost" data-auth="login">登录</button>
+            <button class="btn btn-primary" data-auth="register">注册</button>
+          </div>
         </div>
       </header>
 
@@ -36,7 +39,8 @@
           把零散日志变成清晰、可对比、可分享的个人数据档案。
         </p>
         <div class="hero-actions">
-          <button class="btn btn-primary btn-lg" data-demo="report">演示页面</button>
+          <button class="btn btn-primary btn-lg" data-demo="report">演示数据</button>
+          <button class="btn btn-outline btn-lg" data-action="my-data">我的数据</button>
         </div>
       </section>
 
@@ -83,10 +87,10 @@
     <!-- 主应用（登录后） -->
     <div id="screen-app" class="screen hidden">
       <aside class="sidebar">
-        <div class="brand sidebar-brand">
+        <button type="button" class="brand sidebar-brand brand-home" data-go-home aria-label="返回主页">
           <span class="brand-block"></span>
           <span class="brand-name">Block Snap</span>
-        </div>
+        </button>
         <nav class="sidebar-nav">
           <button class="nav-item active" data-page="instances"><span class="nav-icon">📁</span><span class="nav-label">我的实例</span></button>
           <button class="nav-item" data-page="sites"><span class="nav-icon">🌐</span><span class="nav-label">实用网站</span></button>
@@ -107,7 +111,7 @@
           </div>
           <div class="topbar-center">
             <h2 id="page-title">我的实例</h2>
-            <span class="demo-badge">演示数据</span>
+            <span class="demo-badge" id="app-mode-badge">演示数据</span>
           </div>
           <div class="topbar-end">
             <button class="btn btn-ghost btn-sm" id="btn-account">欢迎回来</button>
@@ -121,7 +125,7 @@
     <div id="screen-report" class="screen hidden">
       <header class="report-topbar">
         <button class="btn btn-ghost" id="btn-back">← 返回</button>
-        <div class="brand sm"><span class="brand-block"></span><span>Block Snap 启动报告</span></div>
+        <button type="button" class="brand sm brand-home" data-go-home aria-label="返回主页"><span class="brand-block"></span><span>Block Snap 启动报告</span></button>
         <button class="btn btn-outline btn-sm" id="btn-share-report">分享</button>
       </header>
       <div class="report-page" id="report-body"></div>

@@ -1,9 +1,9 @@
 server:
-  port: 8082 # system 是 8081，所以业务模块顺延用 8082
+  port: 8082
 
 spring:
   application:
-    name: block-snap-service # 注册到 Nacos 的服务名
+    name: block-snap-service # 须与网关 lb://block-snap-service 一致
   cloud:
     nacos:
       discovery:
@@ -11,12 +11,18 @@ spring:
         username: nacos
         password: nacos
 
-  # 数据库和 Redis 配置（可以直接从 system 模块复制过来）
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/block_snap_system?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-    username: root
-    password: root
+    service:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://localhost:3306/block_snap_service?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+      username: root
+      password: root
+    system:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://localhost:3306/block_snap_system?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+      username: root
+      password: root
+
   data:
     redis:
       host: 127.0.0.1
@@ -24,5 +30,6 @@ spring:
       database: 0
 
 mybatis-plus:
+  mapper-locations: classpath:mapper/**/*.xml
   configuration:
     map-underscore-to-camel-case: true

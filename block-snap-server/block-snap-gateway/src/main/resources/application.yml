@@ -1,9 +1,10 @@
 server:
-  port: 80 # 外部访问整个微服务系统的统一入口端口
+  # 统一 API 入口（与 block-snap-web/vite.config.js 代理目标一致）
+  port: 80
 
 spring:
   application:
-    name: gateway-service # 网关自己的名字
+    name: block-snap-gateway
   cloud:
     nacos:
       discovery:
@@ -11,7 +12,7 @@ spring:
         username: nacos
         password: nacos
     gateway:
-      # 【新增】：全局跨域配置
+      # 全局跨域配置
       globalcors:
         add-to-simple-url-handler-mapping: true # 极其重要：解决 OPTIONS 预检请求被网关拦截导致跨域失败的问题
         cors-configurations:
@@ -28,15 +29,25 @@ spring:
             maxAge: 3600 # 跨域允许的缓存时间（秒），避免浏览器每次都发 OPTIONS 请求探测
 
       routes:
-        # 路由 1：转发给系统管理服务
-        - id: system_route              # 路由的唯一 ID，随便起，但不准重复
-          uri: lb://block-snap-system      # lb 代表 LoadBalance(负载均衡)，后面跟着 Nacos 里的服务名
+        # 系统模块 block-snap-system :8081
+        - id: system_route
+          uri: lb://block-snap-system
           predicates:
-            - Path=/sys-user/** # 拦截规则：只要路径是以 /sys-user/ 开头的，全转走
-        - id: service_route
+            - Path=/sys-user/**
+
+        # 业务模块 block-snap-service :8082（路径前缀与 Controller @RequestMapping 一致，不做 StripPrefix）
+        - id: service_instance_route
           uri: lb://block-snap-service
           predicates:
-            - Path=/svc-instance/**,/svc-snapshot/**,/svc-mod/**
+            - Path=/svc-instance/**
+        - id: service_snapshot_route
+          uri: lb://block-snap-service
+          predicates:
+            - Path=/svc-snapshot/**
+        - id: service_mod_route
+          uri: lb://block-snap-service
+          predicates:
+            - Path=/svc-mod/**
 
   data:
     redis:
