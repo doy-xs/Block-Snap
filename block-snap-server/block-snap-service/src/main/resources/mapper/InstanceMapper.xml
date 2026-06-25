@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.github.doyxs.blocksnap.service.mapper.InstanceMapper">
+
+    <!--
+      返回 InstanceVO 列表。字段来源（见 VO 注释）：
+        instance       : id, name（按 instance.update_time 倒序）
+        sys_user_mark  : favorite, note  → 位于 block_snap_system 库，跨库引用
+        snapshot       : mcVersion/loaderType/loaderVersion/javaVersion/totalLoadMs/lastLaunch
+                         取该实例 snapshot_time 最新的一条
+        modpack_info   : modpackName, modpackVersion, modpackPlatform
+        modCount       : 最新 snapshot 下活跃(mod_snapshot.is_delete=0)的模组数
+        updateCount    : 最新 snapshot 与上一条 snapshot 之间，模组(按 mod_info_id 关联)的
+                         新增 + 移除 + 版本/哈希变动 的总数；无上一条 snapshot 时为 0
+        resourceCount / shaderCount : 暂未实现，固定 0
+
+      动态切换数据库：本 Mapper 走 service 数据源(block_snap_service)，favorite/note 在
+      block_snap_system 库，需用「库名.表名」显式跨库引用（两库须同实例且账号有读权限）。
+    -->
+    <select id="selectListByUserId" resultType="com.github.doyxs.blocksnap.service.model.vo.InstanceVO">
+        <![CDATA[
+        WITH user_instance AS (SELECT id, name, modpack_info_id, update_time
+                               FROM instance
+                               WHERE user_id = #{userId}
+                                 AND is_deleted = 0),
+             snapshot_ranked AS (SELECT s.id,
+                                        s.instance_id,
+                                        s.mc_version,
+                                        s.loader_type,
+                                        s.loader_version,
+                                        s.java_version,
+                                        s.load_ms,
+                                        s.snapshot_time,
+                                        ROW_NUMBER() OVER (
+                                            PARTITION BY s.instance_id
+                                            ORDER BY s.snapshot_time DESC, s.id DESC
+                                            ) AS rn
+                                 FROM snapshot s
+                                          JOIN user_instance ui ON ui.id = s.instance_id),
+             latest_snapshot AS (SELECT id,
+                                        instance_id,
+                                        mc_version,
+                                        loader_type,
+                                        loader_version,
+                                        java_version,
+                                        load_ms,
+                                        snapshot_time
+                                 FROM snapshot_ranked
+                                 WHERE rn = 1),
+             prev_snapshot AS (SELECT id, instance_id
+                               FROM snapshot_ranked
+                               WHERE rn = 2),
+             latest_mods AS (SELECT ls.instance_id, ms.mod_info_id, ms.version, ms.mod_hash
+                             FROM latest_snapshot ls
+                                      JOIN mod_snapshot ms ON ms.snapshot_id = ls.id
+                             WHERE ms.is_delete = 0
+                                OR ms.is_delete IS NULL
+                                OR ms.is_delete = 2),
+             prev_mods AS (SELECT ps.instance_id, ms.mod_info_id, ms.version, ms.mod_hash
+                           FROM prev_snapshot ps
+                                    JOIN mod_snapshot ms ON ms.snapshot_id = ps.id
+                           WHERE ms.is_delete = 0
+                              OR ms.is_delete IS NULL
+                              OR ms.is_delete = 2),
+             mark_ranked AS (SELECT target_id,
+                                    favorite,
+                                    note,
+                                    ROW_NUMBER() OVER (
+                                        PARTITION BY target_id
+                                        ORDER BY update_time DESC, id DESC
+                                        ) AS rn
+                             FROM block_snap_system.sys_user_mark
+                             WHERE user_id = #{userId}
+                               AND target_type = 1),
+             latest_mark AS (SELECT target_id, favorite, note
+                             FROM mark_ranked
+                             WHERE rn = 1),
+             mod_count AS (SELECT instance_id, COUNT(*) AS cnt
+                           FROM latest_mods
+                           GROUP BY instance_id),
+             new_version AS (SELECT lm.instance_id,
+                                    MAX(CASE
+                                            WHEN mi.version IS NOT NULL
+                                                AND lm.version IS NOT NULL
+                                                AND mi.version <> lm.version THEN 1
+                                            ELSE 0
+                                        END) AS flag
+                             FROM latest_mods lm
+                                      JOIN mod_info mi ON mi.id = lm.mod_info_id
+                             GROUP BY lm.instance_id),
+             added_modified AS (SELECT l.instance_id, COUNT(*) AS cnt
+                                FROM latest_mods l
+                                         JOIN prev_snapshot ps ON ps.instance_id = l.instance_id
+                                         LEFT JOIN prev_mods p
+                                                   ON p.instance_id = l.instance_id
+                                                       AND p.mod_info_id = l.mod_info_id
+                                WHERE p.mod_info_id IS NULL
+                                   OR NOT (l.version <=> p.version)
+                                   OR NOT (l.mod_hash <=> p.mod_hash)
+                                GROUP BY l.instance_id),
+             removed AS (SELECT p.instance_id, COUNT(*) AS cnt
+                         FROM prev_mods p
+                                  LEFT JOIN latest_mods l
+                                            ON l.instance_id = p.instance_id
+                                                AND l.mod_info_id = p.mod_info_id
+                         WHERE l.mod_info_id IS NULL
+                         GROUP BY p.instance_id)
+        SELECT ui.id,
+               ui.name,
+               IFNULL(lm.favorite, 0)                  AS favorite,
+               lm.note,
+               ls.mc_version,
+               IFNULL(nv.flag, 0)                      AS is_new_version,
+               ls.loader_type,
+               ls.loader_version,
+               ls.java_version,
+               ls.load_ms                              AS total_load_ms,
+               (IFNULL(am.cnt, 0) + IFNULL(rm.cnt, 0)) AS update_count,
+               IFNULL(mc.cnt, 0)                       AS mod_count,
+               0                                       AS resource_count,
+               0                                       AS shader_count,
+               mp.name                                 AS modpack_name,
+               mp.version                              AS modpack_version,
+               mp.platform                             AS modpack_platform,
+               ls.snapshot_time                        AS last_launch
+        FROM user_instance ui
+                 LEFT JOIN latest_snapshot ls ON ls.instance_id = ui.id
+                 LEFT JOIN latest_mark lm ON lm.target_id = ui.id
+                 LEFT JOIN modpack_info mp ON mp.id = ui.modpack_info_id
+                 LEFT JOIN mod_count mc ON mc.instance_id = ui.id
+                 LEFT JOIN new_version nv ON nv.instance_id = ui.id
+                 LEFT JOIN added_modified am ON am.instance_id = ui.id
+                 LEFT JOIN removed rm ON rm.instance_id = ui.id
+        ORDER BY ui.update_time DESC
+        ]]>
+    </select>
+
+    <!--
+      收藏/备注：部分更新 block_snap_system.sys_user_mark（跨库，走 service 数据源）。
+      favorite 操作只传 favorite，note 操作只传 note；为 null 的列不参与更新。
+      均为 null 时仅刷新 update_time（理论上不会发生）。
+    -->
+    <update id="updateInstanceMark">
+        UPDATE block_snap_system.sys_user_mark
+        <set>
+            <if test="favorite != null">favorite = #{favorite},</if>
+            <if test="note != null">note = #{note},</if>
+            update_time = NOW()
+        </set>
+        WHERE user_id = #{userId}
+          AND target_id = #{instanceId}
+          AND target_type = #{targetType}
+    </update>
+
+    <!--
+      首次标记时插入。create_time / update_time 用表默认值；
+      favorite 不传则用列默认值 0，note 不传则为 NULL。
+    -->
+    <insert id="insertInstanceMark">
+        INSERT INTO block_snap_system.sys_user_mark
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            user_id, target_id, target_type,
+            <if test="favorite != null">favorite,</if>
+            <if test="note != null">note,</if>
+        </trim>
+        <trim prefix="VALUES (" suffix=")" suffixOverrides=",">
+            #{userId}, #{instanceId}, #{targetType},
+            <if test="favorite != null">#{favorite},</if>
+            <if test="note != null">#{note},</if>
+        </trim>
+    </insert>
+
+</mapper>
