@@ -3,11 +3,14 @@ package com.github.doyxs.blocksnap.system.controller;
 import com.github.doyxs.blocksnap.common.api.Result;
 import com.github.doyxs.blocksnap.common.utils.IpUtils;
 import com.github.doyxs.blocksnap.system.model.dto.*;
+import com.github.doyxs.blocksnap.system.model.entity.SysUser;
 import com.github.doyxs.blocksnap.system.service.ISysUserService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/sys-user")
@@ -58,5 +61,15 @@ public class SysUserController {
         return sysUserService.bindAccount(userId, bindAccountDTO);
     }
 
-   
+    /**
+     * 查询当前用户账户。需登录（Authorization）；X-User-Id 由网关注入。
+     * Verify-Token 可选：有效则 phone/email 完整，否则脱敏（不报错）。
+     */
+    @GetMapping("/getAccount")
+    public Result<List<SysUser>> getAccount(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader(value = "Verify-Token", required = false) String verifyToken) {
+        return sysUserService.getAccount(userId, verifyToken);
+    }
+
 }

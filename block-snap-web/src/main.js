@@ -1,5 +1,9 @@
-import { api, isSuccess, getMessage } from './api.js';
-import { isLoggedIn, saveToken, saveUsername, getUsername, saveVerifyToken, clearAuth, clearVerifyToken } from './auth.js';
+import { api, isSuccess, getMessage, SCENES } from './api.js';
+import {
+  isLoggedIn, saveSessionFromLogin, getUsername, saveVerifyToken, clearAuth, clearVerifyToken,
+  hasVerifyToken, hasBoundContact, setHasBoundContact, markPendingBoundContact,
+  isPhone, isEmail, isAccount, restoreSessionFromStorage,
+} from './auth.js';
 import {
   CATEGORY_META, CHANGE_TYPE, RISK_LEVEL,
   INSTANCES, MODPACKS, PLATFORM_UPDATES,
@@ -21,6 +25,16 @@ let appMode = 'demo';
 let liveInstances = [];
 let instancesLoading = false;
 let instancesLoadError = null;
+/** live 实例详情：instanceId → 模组资产列表（已映射为表格行结构） */
+let liveModsByInstanceId = {};
+let liveModsLoading = false;
+let liveModsLoadingId = null;
+let liveModsError = null;
+/** 我的账户：GET /sys-user/getAccount 首条记录 */
+let accountProfile = null;
+let accountProfileLoading = false;
+let accountProfileError = null;
+let verifySectionWarnTimer = null;
 
 // ── Utils ──
 function showToast(msg, type = 'success') {
@@ -51,9 +65,6 @@ function startCooldown(btn, sec = 60) {
 }
 
 // ── Real-time input validation ──
-const PHONE_REGEX = /^1[3-9]\d{9}$/;
-const EMAIL_REGEX = /^[A-Za-z0-9+_.-]+@(.+)$/;
-
 function setupInputValidation(root = document) {
   root.querySelectorAll('[data-validate]').forEach((input) => {
     const handler = () => {
@@ -63,18 +74,20 @@ function setupInputValidation(root = document) {
 
       let section;
       if (validateType === 'phone') {
-        section = form?.querySelector('[data-code-section="phone"]');
+        section = form?.querySelector('[data-code-section="phone"]')
+          || form?.querySelector('[data-code-section="account"]');
       } else if (validateType === 'email') {
-        section = form?.querySelector('[data-code-section="email"]');
+        section = form?.querySelector('[data-code-section="email"]')
+          || form?.querySelector('[data-code-section="account"]');
       } else if (validateType === 'account') {
         section = form?.querySelector('[data-code-section="account"]');
       }
 
       if (!section) return;
 
-      const formatOk = (validateType === 'phone' && PHONE_REGEX.test(value))
-        || (validateType === 'email' && EMAIL_REGEX.test(value))
-        || (validateType === 'account' && (PHONE_REGEX.test(value) || EMAIL_REGEX.test(value)));
+      const formatOk = (validateType === 'phone' && isPhone(value))
+        || (validateType === 'email' && isEmail(value))
+        || (validateType === 'account' && isAccount(value));
 
       // Keep section visible if code already entered or send button in cooldown
       const codeInput = section.querySelector('[data-code-input]');
@@ -95,6 +108,133 @@ function setupInputValidation(root = document) {
     input.addEventListener('input', handler);
     handler();
   });
+}
+
+function buildRegisterPayload(data) {
+  if (data.password !== data.confirmPassword) {
+    throw new Error('两次输入的密码不一致');
+  }
+  const payload = {
+    username: data.username,
+    password: data.password,
+    confirmPassword: data.confirmPassword,
+  };
+  if (data.phone) {
+    if (!isPhone(data.phone)) throw new Error('手机号格式不正确');
+    if (!data.phoneVerificationCode) throw new Error('请填写手机验证码');
+    payload.phone = data.phone;
+    payload.phoneVerificationCode = data.phoneVerificationCode;
+  }
+  if (data.email) {
+    if (!isEmail(data.email)) throw new Error('邮箱格式不正确');
+    if (!data.emailVerificationCode) throw new Error('请填写邮箱验证码');
+    payload.email = data.email;
+    payload.emailVerificationCode = data.emailVerificationCode;
+  }
+  return payload;
+}
+
+function validateForgotPayload(data) {
+  if (!isAccount(data.account)) throw new Error('请输入正确的手机或邮箱');
+  if (!data.verificationCode) throw new Error('请填写验证码');
+  if (!data.resetPassword) throw new Error('请填写新密码');
+  if (data.resetPassword !== data.confirmResetPassword) throw new Error('两次输入的新密码不一致');
+  return data;
+}
+
+function validatePasswordPayload(data) {
+  if (!hasAnyBoundContact(accountProfile)) {
+    throw new Error('请先绑定手机或邮箱');
+  }
+  if (!isAccountSecurityVerified(accountProfile)) {
+    throw new Error('请先在账户页完成安全验证后再修改密码');
+  }
+  if (!data.oldPassword) throw new Error('请填写原密码');
+  if (!data.newPassword) throw new Error('请填写新密码');
+  if (data.newPassword !== data.confirmNewPassword) throw new Error('两次输入的新密码不一致');
+  return data;
+}
+
+function validateBindPayload(data, bindHint) {
+  const hint = bindHint || document.getElementById('account-action-modal')?.dataset.bindHint || '';
+  if (hint === 'phone') {
+    if (!isPhone(data.account)) throw new Error('请输入正确的手机号');
+  } else if (hint === 'email') {
+    if (!isEmail(data.account)) throw new Error('请输入正确的邮箱');
+  } else if (!isAccount(data.account)) {
+    throw new Error('请输入正确的手机或邮箱');
+  }
+  if (!data.verificationCode) throw new Error('请填写验证码');
+  if (needsSecurityVerifyForBind(hint) && !isAccountSecurityVerified(accountProfile)) {
+    throw new Error('换绑前请先完成安全验证');
+  }
+  return data;
+}
+
+function validateVerifyPayload(data) {
+  if (!isAccount(data.account)) throw new Error('请输入已绑定的手机或邮箱');
+  if (!data.verificationCode) throw new Error('请填写验证码');
+  return data;
+}
+
+function resetLiveSession() {
+  appMode = 'demo';
+  liveInstances = [];
+  liveModsByInstanceId = {};
+  liveModsError = null;
+  instancesLoadError = null;
+  accountProfile = null;
+  accountProfileLoading = false;
+  accountProfileError = null;
+}
+
+function formatAccountStatus(status) {
+  if (status === 1) return { text: '正常', badge: 'account-badge-ok' };
+  if (status === 0) return { text: '已停用', badge: 'account-badge-danger' };
+  return { text: '未知', badge: 'account-badge-muted' };
+}
+
+function formatAccountField(value, emptyLabel = '未绑定') {
+  const v = value == null ? '' : String(value).trim();
+  return v ? escapeHtml(v) : `<span class="account-empty">${emptyLabel}</span>`;
+}
+
+async function loadAccountProfile() {
+  if (!isLoggedIn()) {
+    accountProfile = null;
+    accountProfileError = null;
+    return;
+  }
+  accountProfileLoading = true;
+  accountProfileError = null;
+  try {
+    const r = await api.getAccount({ verify: hasVerifyToken() });
+    if (isSuccess(r) && Array.isArray(r.data) && r.data.length > 0) {
+      accountProfile = r.data[0];
+      cacheAccountContacts(accountProfile);
+      if (accountProfile.phone || accountProfile.email) {
+        setHasBoundContact(true);
+      }
+      if (hasVerifyToken() && hasAnyBoundContact(accountProfile) && !isAccountSecurityVerified(accountProfile)) {
+        clearVerifyToken();
+      }
+    } else {
+      accountProfile = null;
+      accountProfileError = getMessage(r);
+    }
+  } catch {
+    accountProfile = null;
+    accountProfileError = '网络错误，请稍后重试';
+  } finally {
+    accountProfileLoading = false;
+  }
+}
+
+async function refreshSettingsPage() {
+  await loadAccountProfile();
+  if (currentPage === 'settings') {
+    renderPage();
+  }
 }
 
 // ── Screens ──
@@ -260,6 +400,62 @@ function setLiveInstanceNote(id, note) {
   inst.note = (note || '').trim();
 }
 
+/** 将后端 ModVo 转为资产表行；id = mod_snapshot.id，收藏/备注 API 的 modId 同此字段 */
+function mapModVoToAsset(dto) {
+  const addedTime = dto.addedTime ? String(dto.addedTime).replace('T', ' ') : null;
+  const updateTime = dto.updateTime ? String(dto.updateTime).replace('T', ' ') : null;
+  return {
+    id: String(dto.id ?? ''),
+    name: dto.name || '—',
+    version: dto.version || '—',
+    isNewVersion: dto.isNewVersion,
+    isDeleted: dto.isDeleted ?? 0,
+    loadTimeMs: dto.loadTime ?? null,
+    favorite: dto.favorite ?? 0,
+    favorited: (dto.favorite ?? 0) === 1,
+    note: dto.note || '',
+    addedTime,
+    updateTime,
+  };
+}
+
+function findLiveMod(instanceId, modId) {
+  return (liveModsByInstanceId[String(instanceId)] || []).find((m) => m.id === String(modId));
+}
+
+async function loadLiveMods(instanceId) {
+  const id = String(instanceId);
+  liveModsLoading = true;
+  liveModsLoadingId = id;
+  liveModsError = null;
+  try {
+    const r = await api.listMods(Number(instanceId));
+    if (!isSuccess(r)) {
+      liveModsError = getMessage(r);
+      liveModsByInstanceId[id] = [];
+      return false;
+    }
+    liveModsByInstanceId[id] = (r.data || []).map(mapModVoToAsset);
+    return true;
+  } catch {
+    liveModsError = '网络错误，请确认网关已启动';
+    liveModsByInstanceId[id] = [];
+    return false;
+  } finally {
+    liveModsLoading = false;
+    liveModsLoadingId = null;
+  }
+}
+
+async function openLiveInstanceDetail(instanceId) {
+  activeInstanceId = String(instanceId);
+  navigateTo('instance-detail', { id: activeInstanceId });
+  await loadLiveMods(activeInstanceId);
+  if (currentPage === 'instance-detail' && String(activeInstanceId) === String(instanceId)) {
+    renderPage({ id: activeInstanceId });
+  }
+}
+
 function requestMyData() {
   if (isLoggedIn()) enterMyData();
   else {
@@ -333,6 +529,15 @@ function navigateTo(page, data) {
 
   document.querySelector('.app-main')?.classList.toggle('app-main-centered', page === 'instances');
   document.querySelector('.app-main')?.classList.toggle('app-main-detail', page === 'instance-detail');
+
+  if (page === 'settings' && isLoggedIn()) {
+    accountProfileLoading = true;
+    renderPage(data);
+    loadAccountProfile().then(() => {
+      if (currentPage === 'settings') renderPage(data);
+    });
+    return;
+  }
 
   renderPage(data);
 }
@@ -461,7 +666,102 @@ function escapeHtml(str) {
 // ============================================================
 // Page: 实例详情
 // ============================================================
+function renderLiveModsPanel(instanceId) {
+  const id = String(instanceId);
+  if (liveModsLoading && liveModsLoadingId === id) {
+    return '<p class="empty-state">正在加载模组列表…</p>';
+  }
+  if (liveModsError && liveModsByInstanceId[id] !== undefined && !liveModsByInstanceId[id]?.length) {
+    return `
+      <div class="instances-state">
+        <p class="empty-state">${escapeHtml(liveModsError)}</p>
+        <button type="button" class="btn btn-primary btn-sm" data-reload-mods="${id}">重新加载</button>
+      </div>`;
+  }
+  const mods = liveModsByInstanceId[id];
+  if (mods === undefined) {
+    return '<p class="empty-state">正在加载模组列表…</p>';
+  }
+  if (!mods.length) {
+    return '<p class="empty-hint">暂无模组</p>';
+  }
+  return renderAssetTable('mods', mods, { id, _live: true });
+}
+
+function renderLiveInstanceDetail(inst) {
+  const loaderLabel = [inst.loaderType, inst.loaderVersion].filter((v) => v && v !== '—').join(' ');
+  const mpLabel = inst.modpackName
+    ? `${escapeHtml(inst.modpackName)}${inst.modpackVersion ? ` v${escapeHtml(inst.modpackVersion)}` : ''}`
+    : '无绑定整合包';
+
+  return `
+    <div class="detail-page" data-instance="${inst.id}" data-live="1">
+
+      <div class="detail-hero">
+        <div class="detail-hero-left">
+          <h2>${escapeHtml(inst.name)}</h2>
+          <div class="instance-tags">
+            <span class="inst-tag">${escapeHtml(inst.mcVersion)}</span>
+            <span class="inst-tag">${escapeHtml(loaderLabel || '—')}</span>
+            <span class="inst-tag">Java ${escapeHtml(inst.javaVersion)}</span>
+          </div>
+          <p class="inst-mp">📦 ${mpLabel}${inst.lastLaunch ? `<span class="inst-mp-sep">·</span>最近启动 ${inst.lastLaunch.slice(0, 16)}` : ''}</p>
+        </div>
+      </div>
+
+      <div class="detail-tabs-bar">
+        <button class="dtab active" data-asset-tab="mods">🧩 模组</button>
+        <button class="dtab" data-asset-tab="resourcePacks">🪵 资源包</button>
+        <button class="dtab" data-asset-tab="shaderPacks">☄️ 光影包</button>
+        <button class="dtab" data-asset-tab="configs">📜 配置文件</button>
+      </div>
+
+      <div class="detail-asset-panels">
+        <div class="asset-panel active" data-asset-panel="mods">
+          ${renderLiveModsPanel(inst.id)}
+        </div>
+        <div class="asset-panel" data-asset-panel="resourcePacks">
+          <div class="placeholder-page" style="min-height:30vh">
+            <div class="placeholder-content">
+              <span class="placeholder-icon">🪵</span>
+              <h2>资源包</h2>
+              <p>云端资源包列表开发中，敬请期待。</p>
+              <span class="wip-badge">开发中</span>
+            </div>
+          </div>
+        </div>
+        <div class="asset-panel" data-asset-panel="shaderPacks">
+          <div class="placeholder-page" style="min-height:30vh">
+            <div class="placeholder-content">
+              <span class="placeholder-icon">☄️</span>
+              <h2>光影包</h2>
+              <p>云端光影包列表开发中，敬请期待。</p>
+              <span class="wip-badge">开发中</span>
+            </div>
+          </div>
+        </div>
+        <div class="asset-panel" data-asset-panel="configs">
+          <div class="placeholder-page" style="min-height:30vh">
+            <div class="placeholder-content">
+              <span class="placeholder-icon">📜</span>
+              <h2>配置文件</h2>
+              <p>配置文件列表开发中，敬请期待。</p>
+              <span class="wip-badge">开发中</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
 function renderInstanceDetail(instanceId) {
+  if (appMode === 'live') {
+    const liveInst = liveInstances.find((i) => i.id === String(instanceId));
+    if (!liveInst) return '<p class="empty-state">实例不存在</p>';
+    backPage = 'instances';
+    return renderLiveInstanceDetail(liveInst);
+  }
+
   const inst = getInstance(instanceId);
   if (!inst) return '<p class="empty-state">实例不存在</p>';
 
@@ -563,21 +863,24 @@ function renderAssetFavCell(a, category, instance, deleted = false, favCol = 6) 
 function renderAssetVerCell(a) {
   const versionText = a?.version ? String(a.version) : '—';
 
-  // Back-end field `IsNewVersion` semantics may differ from our previous `latestVersion` compare.
-  // We try to infer the meaning using `latestVersion` when available; otherwise we fall back to "true=hasNew".
-  const hasNewByCompare = Boolean(a.latestVersion && a.latestVersion !== a.version);
   let isLatest;
-  if (typeof a?.IsNewVersion === 'boolean') {
-    if (a.latestVersion != null) {
-      if (hasNewByCompare === a.IsNewVersion) isLatest = !a.IsNewVersion;       // true => has new
-      else if (hasNewByCompare === !a.IsNewVersion) isLatest = a.IsNewVersion; // true => already latest
-      else isLatest = !a.IsNewVersion; // fallback: assume true => has new
-    } else {
-      isLatest = !a.IsNewVersion; // fallback when we don't have latestVersion info
-    }
+  if (a.isNewVersion === 1) {
+    isLatest = true;
+  } else if (a.isNewVersion === 2) {
+    isLatest = false;
   } else {
-    // If back-end doesn't provide `IsNewVersion`, use our previous compare logic.
-    isLatest = !hasNewByCompare;
+    const hasNewByCompare = Boolean(a.latestVersion && a.latestVersion !== a.version);
+    if (typeof a?.IsNewVersion === 'boolean') {
+      if (a.latestVersion != null) {
+        if (hasNewByCompare === a.IsNewVersion) isLatest = !a.IsNewVersion;
+        else if (hasNewByCompare === !a.IsNewVersion) isLatest = a.IsNewVersion;
+        else isLatest = !a.IsNewVersion;
+      } else {
+        isLatest = !a.IsNewVersion;
+      }
+    } else {
+      isLatest = !hasNewByCompare;
+    }
   }
 
   const tooltipText = isLatest ? '已最新' : '可更新';
@@ -632,8 +935,8 @@ function layoutAssetTables() {
 }
 
 function renderAssetTable(category, assets, instance) {
-  const active = assets.filter((a) => !a.isDelete);
-  const deleted = assets.filter((a) => a.isDelete);
+  const active = assets.filter((a) => !a.isDeleted);
+  const deleted = assets.filter((a) => a.isDeleted);
 
   if (!active.length && !deleted.length) {
     return '<p class="empty-hint">暂无数据</p>';
@@ -647,17 +950,17 @@ function renderAssetTable(category, assets, instance) {
   const headCoreCols = isMod
     ? `
         <div class="asset-core-col" data-col="0"><span class="asset-head-label">名称</span></div>
-        <div class="asset-core-col" data-col="1"><span class="asset-head-label">版本</span></div>
+        <div class="asset-core-col" data-col="1"><span class="asset-head-label">当前版本</span></div>
         <div class="asset-core-col" data-col="2"><span class="asset-head-label">加载耗时</span></div>
-        <div class="asset-core-col asset-col-created" data-col="3"><span class="asset-head-label">创建时间</span></div>
-        <div class="asset-core-col" data-col="4"><span class="asset-head-label">更新时间</span></div>
+        <div class="asset-core-col asset-col-created" data-col="3"><span class="asset-head-label">首次检测时间</span></div>
+        <div class="asset-core-col" data-col="4"><span class="asset-head-label">最新更改时间</span></div>
         <div class="asset-core-col asset-col-note" data-col="5"><span class="asset-head-label">备注</span></div>
         <div class="asset-core-col asset-col-fav" data-col="6"><span class="sr-only">收藏</span></div>`
     : `
         <div class="asset-core-col" data-col="0"><span class="asset-head-label">名称</span></div>
-        <div class="asset-core-col" data-col="1"><span class="asset-head-label">版本</span></div>
-        <div class="asset-core-col asset-col-created" data-col="2"><span class="asset-head-label">创建时间</span></div>
-        <div class="asset-core-col" data-col="3"><span class="asset-head-label">更新时间</span></div>
+        <div class="asset-core-col" data-col="1"><span class="asset-head-label">当前版本</span></div>
+        <div class="asset-core-col asset-col-created" data-col="2"><span class="asset-head-label">首次检测时间</span></div>
+        <div class="asset-core-col" data-col="3"><span class="asset-head-label">最新更改时间</span></div>
         <div class="asset-core-col asset-col-note" data-col="4"><span class="asset-head-label">备注</span></div>
         <div class="asset-core-col asset-col-fav" data-col="5"><span class="sr-only">收藏</span></div>`;
 
@@ -1056,53 +1359,327 @@ function renderUsefulSites() {
 // ============================================================
 // Page: 我的账户
 // ============================================================
+function hasBoundPhone(phone) {
+  return phone != null && String(phone).trim() !== '';
+}
+
+function hasBoundEmail(email) {
+  return email != null && String(email).trim() !== '';
+}
+
+/** 是否已绑定任一联系方式（与后端 VerifyTokenInterceptor / bindAccount 一致） */
+function hasAnyBoundContact(profile = accountProfile) {
+  if (!profile) return false;
+  return hasBoundPhone(profile.phone) || hasBoundEmail(profile.email);
+}
+
+/** 换绑 / 改密前是否需先完成安全验证 */
+function needsSecurityVerify(profile = accountProfile) {
+  return hasAnyBoundContact(profile);
+}
+
+/** 绑定操作是否需安全验证（首次绑定手机/邮箱且两者均为空时不需要） */
+function needsSecurityVerifyForBind(bindHint, profile = accountProfile) {
+  if (!hasAnyBoundContact(profile)) return false;
+  return true;
+}
+
+/**
+ * 是否已通过安全验证：getAccount 在携带有效 Verify-Token 时返回完整联系方式（非脱敏）
+ */
+function isAccountSecurityVerified(profile = accountProfile) {
+  if (!profile || !hasAnyBoundContact(profile)) return false;
+  if (hasBoundPhone(profile.phone) && isMaskedContact(profile.phone)) return false;
+  if (hasBoundEmail(profile.email) && isMaskedContact(profile.email)) return false;
+  return true;
+}
+
+function clearVerifySectionHighlight() {
+  if (verifySectionWarnTimer) {
+    clearTimeout(verifySectionWarnTimer);
+    verifySectionWarnTimer = null;
+  }
+  const section = document.getElementById('account-verify-section');
+  section?.classList.remove('account-verify-section--warn');
+  document.getElementById('account-verify-warn')?.classList.add('hidden');
+}
+
+function highlightVerifySection(message) {
+  const section = document.getElementById('account-verify-section');
+  if (!section) {
+    showToast(message, 'error');
+    return;
+  }
+  const warn = document.getElementById('account-verify-warn');
+  if (warn) {
+    warn.textContent = message;
+    warn.classList.remove('hidden');
+  }
+  section.classList.add('account-verify-section--warn');
+  section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  if (verifySectionWarnTimer) clearTimeout(verifySectionWarnTimer);
+  verifySectionWarnTimer = setTimeout(clearVerifySectionHighlight, 6000);
+}
+
+function handleAccountActionClick(kind, bindHint) {
+  const profile = accountProfile;
+
+  if (kind === 'password') {
+    if (!hasAnyBoundContact(profile)) {
+      showToast('请先绑定手机或邮箱', 'error');
+      return;
+    }
+    if (!isAccountSecurityVerified(profile)) {
+      highlightVerifySection('请先完成安全验证后再修改密码');
+      return;
+    }
+    openAccountModal('password');
+    return;
+  }
+
+  if (kind === 'bind') {
+    if (needsSecurityVerifyForBind(bindHint, profile) && !isAccountSecurityVerified(profile)) {
+      const isRebind = bindHint === 'phone'
+        ? hasBoundPhone(profile?.phone)
+        : bindHint === 'email'
+          ? hasBoundEmail(profile?.email)
+          : false;
+      highlightVerifySection(isRebind ? '请先完成安全验证后再换绑' : '请先完成安全验证后再绑定');
+      return;
+    }
+    openAccountModal('bind', bindHint);
+  }
+}
+
+function setAccountModalFormDisabled(form, disabled) {
+  if (!form) return;
+  form.querySelectorAll('input, button').forEach((el) => {
+    el.disabled = disabled;
+  });
+}
+
+function isMaskedContact(value) {
+  if (value == null) return false;
+  const s = String(value);
+  return s.includes('****') || (s.includes('***') && s.includes('@'));
+}
+
+function cacheAccountContacts(profile) {
+  if (profile?.phone && !isMaskedContact(profile.phone)) {
+    sessionStorage.setItem('accountPhone', String(profile.phone).trim());
+  }
+  if (profile?.email && !isMaskedContact(profile.email)) {
+    sessionStorage.setItem('accountEmail', String(profile.email).trim());
+  }
+}
+
+function renderVerifySection(profile, verified) {
+  const hasPhone = hasBoundPhone(profile.phone);
+  const hasEmail = hasBoundEmail(profile.email);
+  if (!hasPhone && !hasEmail) return '';
+
+  if (verified) {
+    return `
+      <div id="account-verify-section" class="account-verify-section account-verify-section--done">
+        <div class="account-verify-section-head">
+          <h3>安全验证</h3>
+          <span class="account-inline-ok">✓ 已通过</span>
+        </div>
+      </div>`;
+  }
+
+  const accountField = `<input name="account" class="account-verify-account" type="text" required placeholder="请输入已绑定的手机或邮箱" aria-label="验证账号" autocomplete="username" />`;
+
+  return `
+    <div id="account-verify-section" class="account-verify-section">
+      <div class="account-verify-section-head">
+        <h3>安全验证</h3>
+      </div>
+      <p id="account-verify-warn" class="account-verify-warn-msg hidden" role="alert"></p>
+      <form id="form-verify" class="account-verify-inline">
+        ${accountField}
+        <input name="verificationCode" class="account-verify-code" type="text" inputmode="numeric" placeholder="验证码" required maxlength="6" autocomplete="one-time-code" />
+        <button type="button" class="btn btn-secondary btn-sm code-btn" data-scene="${SCENES.VERIFY_ACCOUNT}" data-target="account">发码</button>
+        <button type="submit" class="btn btn-soft btn-sm">验证</button>
+      </form>
+    </div>`;
+}
+
+function openAccountModal(kind, bindHint) {
+  const modal = document.getElementById('account-action-modal');
+  const titleEl = document.getElementById('account-modal-title');
+  const panePassword = document.getElementById('account-modal-pane-password');
+  const paneBind = document.getElementById('account-modal-pane-bind');
+  if (!modal || !titleEl) return;
+
+  panePassword?.classList.add('hidden');
+  paneBind?.classList.add('hidden');
+
+  const profile = accountProfile;
+
+  if (kind === 'password') {
+    titleEl.textContent = '修改密码';
+    panePassword?.classList.remove('hidden');
+    document.getElementById('account-modal-password-hint')?.classList.add('hidden');
+    setAccountModalFormDisabled(document.getElementById('form-password'), false);
+  } else if (kind === 'bind') {
+    const isPhone = bindHint === 'phone';
+    const isEmail = bindHint === 'email';
+    const phoneBound = hasBoundPhone(profile?.phone);
+    const emailBound = hasBoundEmail(profile?.email);
+    const isRebind = isPhone ? phoneBound : isEmail ? emailBound : false;
+
+    titleEl.textContent = isRebind
+      ? (isPhone ? '换绑手机' : '换绑邮箱')
+      : (isPhone ? '绑定手机' : isEmail ? '绑定邮箱' : '绑定联系方式');
+
+    paneBind?.classList.remove('hidden');
+
+    const currentWrap = document.getElementById('account-modal-current-wrap');
+    const currentLabel = document.getElementById('account-modal-current-label');
+    const currentValue = document.getElementById('account-modal-current-value');
+    const bindHintEl = document.getElementById('account-modal-bind-hint');
+    const newLabel = document.getElementById('account-modal-new-label');
+    const form = document.getElementById('form-bind');
+    const input = form?.querySelector('[name="account"]');
+    const codeSection = form?.querySelector('[data-code-section="account"]');
+
+    bindHintEl?.classList.add('hidden');
+
+    if (isRebind && currentWrap && currentLabel && currentValue) {
+      currentWrap.classList.remove('hidden');
+      if (isPhone) {
+        currentLabel.textContent = '原手机号';
+        currentValue.textContent = String(profile.phone).trim();
+        if (newLabel) newLabel.textContent = '新手机号';
+        if (input) input.placeholder = '请输入新的手机号';
+        if (input) input.dataset.validate = 'phone';
+      } else {
+        currentLabel.textContent = '原邮箱';
+        currentValue.textContent = String(profile.email).trim();
+        if (newLabel) newLabel.textContent = '新邮箱';
+        if (input) input.placeholder = '请输入新的邮箱地址';
+        if (input) input.dataset.validate = 'email';
+      }
+    } else {
+      currentWrap?.classList.add('hidden');
+      if (newLabel) newLabel.textContent = isPhone ? '手机号' : isEmail ? '邮箱' : '手机 / 邮箱';
+      if (input) {
+        input.placeholder = isPhone
+          ? '请输入手机号'
+          : isEmail
+            ? '请输入邮箱地址'
+            : '请输入手机号或邮箱';
+        input.dataset.validate = isPhone ? 'phone' : isEmail ? 'email' : 'account';
+      }
+    }
+
+    form?.reset?.();
+    codeSection?.classList.add('hidden');
+    setAccountModalFormDisabled(form, false);
+    setupInputValidation(form);
+  }
+
+  modal.classList.remove('hidden');
+  if (kind === 'bind') {
+    modal.dataset.bindHint = bindHint || '';
+  }
+}
+
+function closeAccountModal() {
+  document.getElementById('account-action-modal')?.classList.add('hidden');
+}
+
+function renderAccountRow(label, valueHtml, actionHtml = '') {
+  return `
+    <div class="account-row">
+      <span class="account-row-label">${label}</span>
+      <span class="account-row-value">${valueHtml}</span>
+      ${actionHtml ? `<div class="account-row-action">${actionHtml}</div>` : ''}
+    </div>`;
+}
+
 function renderSettings() {
   backPage = null;
-  const hasVerify = !!localStorage.getItem('verifyToken');
+  const verified = accountProfile ? isAccountSecurityVerified(accountProfile) : false;
+
+  if (accountProfileLoading) {
+    return `
+      <div class="settings-page">
+        <div class="settings-card">
+          <div class="account-profile-head"><h3>我的账户</h3></div>
+          <p class="settings-hint account-loading">正在加载…</p>
+        </div>
+      </div>`;
+  }
+
+  if (accountProfileError && !accountProfile) {
+    return `
+      <div class="settings-page">
+        <div class="settings-card">
+          <div class="account-profile-head">
+            <h3>我的账户</h3>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-reload-account">重试</button>
+          </div>
+          <p class="settings-hint settings-warn">${escapeHtml(accountProfileError)}</p>
+        </div>
+      </div>`;
+  }
+
+  if (!accountProfile) {
+    return `
+      <div class="settings-page">
+        <div class="settings-card">
+          <div class="account-profile-head">
+            <h3>我的账户</h3>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-reload-account">刷新</button>
+          </div>
+          <p class="settings-hint">暂无账户数据。</p>
+        </div>
+      </div>`;
+  }
+
+  const a = accountProfile;
+  const st = formatAccountStatus(a.status);
+  const phoneBound = hasBoundPhone(a.phone);
+  const emailBound = hasBoundEmail(a.email);
+  const phoneBtnLabel = phoneBound ? '换绑' : '绑定';
+  const emailBtnLabel = emailBound ? '换绑' : '绑定';
+
   return `
     <div class="settings-page">
       <div class="settings-card">
-        <div class="settings-grid">
-          <section class="settings-section">
-            <h3>二次验证</h3>
-            <div class="verify-status ${hasVerify ? 'ok' : ''}">${hasVerify ? '✓ 已通过' : '○ 尚未验证'}</div>
-            <form id="form-verify" class="settings-form">
-              <label><span>手机 / 邮箱</span><input name="account" required data-validate="account" /></label>
-              <div class="field-row code-section hidden" data-code-section="account">
-                <label class="flex-grow"><span>验证码</span><input name="verificationCode" data-code-input="account" /></label>
-                <button type="button" class="btn btn-secondary code-btn" data-scene="verify-account" data-target="account">获取验证码</button>
-              </div>
-              <button type="submit" class="btn btn-soft">验证</button>
-            </form>
-          </section>
-          <section class="settings-section">
-            <h3>修改密码</h3>
-            <form id="form-password" class="settings-form">
-              <label><span>原密码</span><input name="oldPassword" type="password" required /></label>
-              <label><span>新密码</span><input name="newPassword" type="password" required /></label>
-              <label><span>确认</span><input name="confirmNewPassword" type="password" required /></label>
-              <button type="submit" class="btn btn-soft">修改</button>
-            </form>
-          </section>
+        <div class="account-profile-head">
+          <h3>我的账户</h3>
+          <div class="account-profile-actions">
+            <button type="button" class="btn btn-sm account-head-btn" id="btn-reload-account">刷新</button>
+            <button type="button" class="btn btn-sm account-head-btn account-logout-btn" id="btn-logout-settings">退出登录</button>
+          </div>
         </div>
-        <div class="settings-divider"></div>
-        <section class="settings-section">
-          <h3>绑定账号</h3>
-          <form id="form-bind" class="settings-form settings-form-inline">
-            <label><span>手机 / 邮箱</span><input name="account" required data-validate="account" /></label>
-            <div class="field-row code-section hidden" data-code-section="account">
-              <label class="flex-grow"><span>验证码</span><input name="verificationCode" data-code-input="account" /></label>
-              <button type="button" class="btn btn-secondary code-btn" data-scene="bind-account" data-target="account">获取验证码</button>
-            </div>
-            <button type="submit" class="btn btn-soft">绑定</button>
-          </form>
-        </section>
-        <div class="settings-divider"></div>
-        <section class="settings-section settings-section-danger">
-          <h3>退出登录</h3>
-          <p class="settings-hint">退出后需要重新登录才能访问。</p>
-          <button class="btn btn-danger" id="btn-logout-settings">退出登录</button>
-        </section>
+
+        <div class="account-rows">
+          ${renderAccountRow('账户名', formatAccountField(a.username, '—'))}
+          ${renderAccountRow('昵称', formatAccountField(a.nickname, '—'))}
+          ${renderAccountRow(
+            '手机',
+            formatAccountField(a.phone),
+            `<button type="button" class="btn btn-text btn-sm" data-open-account-modal="bind" data-bind-hint="phone">${phoneBtnLabel}</button>`,
+          )}
+          ${renderAccountRow(
+            '邮箱',
+            formatAccountField(a.email),
+            `<button type="button" class="btn btn-text btn-sm" data-open-account-modal="bind" data-bind-hint="email">${emailBtnLabel}</button>`,
+          )}
+          ${renderAccountRow(
+            '登录密码',
+            '<span class="account-masked">••••••••</span>',
+            '<button type="button" class="btn btn-text btn-sm" data-open-account-modal="password">修改</button>',
+          )}
+          ${renderAccountRow('账户状态', `<span class="account-badge ${st.badge}">${st.text}</span>`)}
+          ${renderAccountRow('最后登录 IP', `<span class="mono">${formatAccountField(a.lastLoginIp, '—')}</span>`)}
+        </div>
+
+        ${renderVerifySection(a, verified)}
       </div>
     </div>`;
 }
@@ -1115,14 +1692,22 @@ function bindPageEvents() {
 
   // Instance card clicks
   root.querySelectorAll('[data-instance]').forEach((card) => {
-    card.addEventListener('click', (e) => {
+    card.addEventListener('click', async (e) => {
       if (e.target.closest('button') || e.target.closest('select') || e.target.closest('input') || e.target.closest('[data-no-nav]')) return;
       if (card.dataset.live === '1') {
-        showToast('云端实例详情页开发中', 'error');
+        await openLiveInstanceDetail(card.dataset.instance);
         return;
       }
       activeInstanceId = card.dataset.instance;
       navigateTo('instance-detail', { id: card.dataset.instance });
+    });
+  });
+
+  root.querySelectorAll('[data-reload-mods]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.reloadMods;
+      await loadLiveMods(id);
+      if (currentPage === 'instance-detail') renderPage({ id });
     });
   });
 
@@ -1306,10 +1891,27 @@ function bindPageEvents() {
     input.addEventListener('input', () => {
       input.classList.toggle('has-value', !!input.value.trim());
     });
-    input.addEventListener('blur', () => {
+    input.addEventListener('blur', async () => {
       const instId = input.dataset.assetInst;
       const cat = input.dataset.assetCat;
       const key = input.dataset.assetNote;
+      const detailLive = input.closest('.detail-page[data-live="1"]');
+      if (detailLive && cat === 'mods') {
+        const mod = findLiveMod(instId, key);
+        const prev = mod?.note || '';
+        const next = input.value.trim();
+        if (next === prev) return;
+        const result = await api.updateModNote(Number(mod.id), next);
+        if (!isSuccess(result)) {
+          input.value = prev;
+          showToast(getMessage(result), 'error');
+          return;
+        }
+        if (mod) mod.note = next;
+        input.classList.toggle('has-value', !!next);
+        showToast(next ? '备注已保存' : '备注已清空');
+        return;
+      }
       const inst = getInstance(instId);
       if (!inst) return;
       const latest = getLatestSnapshot(inst);
@@ -1324,11 +1926,29 @@ function bindPageEvents() {
 
   // Favorite toggle (asset table)
   root.querySelectorAll('.asset-fav-btn').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const favId = btn.dataset.fav;
       const favCat = btn.dataset.favCat;
       const favInst = btn.dataset.favInst;
+      const detailLive = btn.closest('.detail-page[data-live="1"]');
+      if (detailLive && favCat === 'mods') {
+        const mod = findLiveMod(favInst, favId);
+        if (!mod) return;
+        const nextFav = mod.favorited ? 0 : 1;
+        const result = await api.updateModFavorite(Number(mod.id), nextFav);
+        if (!isSuccess(result)) {
+          showToast(getMessage(result), 'error');
+          return;
+        }
+        mod.favorite = nextFav;
+        mod.favorited = nextFav === 1;
+        btn.textContent = mod.favorited ? '★' : '☆';
+        btn.classList.toggle('fav-active', mod.favorited);
+        btn.setAttribute('aria-label', mod.favorited ? '取消收藏' : '收藏');
+        showToast(mod.favorited ? '已收藏' : '已取消收藏');
+        return;
+      }
       const inst = getInstance(favInst);
       if (!inst) return;
       const latest = getLatestSnapshot(inst);
@@ -1403,49 +2023,105 @@ function bindPageEvents() {
 // Auth & Settings forms (unchanged)
 // ============================================================
 function bindSettingsForms() {
-  document.getElementById('form-verify')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const { account, verificationCode } = getFormData(e.target);
-    try {
-      const r = await api.verifyAccount(account, verificationCode);
-      if (isSuccess(r)) { saveVerifyToken(r.data); showToast(getMessage(r)); renderPage(); bindPageEvents(); }
-      else showToast(getMessage(r), 'error');
-    } catch { showToast('网络错误', 'error'); }
-  });
-
-  document.getElementById('form-password')?.addEventListener('submit', async (e) => {
+  const verifyForm = document.getElementById('form-verify');
+  verifyForm?.addEventListener('focusin', clearVerifySectionHighlight);
+  verifyForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
-      const r = await api.updatePassword(getFormData(e.target));
-      if (isSuccess(r)) { showToast(getMessage(r)); clearAuth(); enterLanding(); }
-      else showToast(getMessage(r), 'error');
-    } catch { showToast('网络错误', 'error'); }
-  });
-
-  document.getElementById('form-bind')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const data = getFormData(e.target);
-    const needVerify = !!localStorage.getItem('verifyToken');
-    try {
-      const r = await api.bindAccount(data.account, data.verificationCode, needVerify);
-      if (isSuccess(r)) { showToast(getMessage(r)); clearVerifyToken(); e.target.reset(); renderPage(); bindPageEvents(); }
-      else showToast(getMessage(r), 'error');
-    } catch { showToast('网络错误', 'error'); }
+      const data = validateVerifyPayload(getFormData(e.target));
+      const r = await api.verifyAccount(data.account, data.verificationCode);
+      if (isSuccess(r)) {
+        saveVerifyToken(r.data);
+        setHasBoundContact(true);
+        clearVerifySectionHighlight();
+        showToast(getMessage(r));
+        await refreshSettingsPage();
+      } else showToast(getMessage(r), 'error');
+    } catch (err) { showToast(err.message || '网络错误', 'error'); }
   });
 
   bindCodeButtons(document.getElementById('content-area'));
   setupInputValidation(document.getElementById('content-area'));
+
+  document.getElementById('btn-reload-account')?.addEventListener('click', () => {
+    refreshSettingsPage();
+  });
+}
+
+function setupAccountModal() {
+  document.getElementById('form-password')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const data = validatePasswordPayload(getFormData(e.target));
+      const r = await api.updatePassword(data);
+      if (isSuccess(r)) {
+        closeAccountModal();
+        showToast(getMessage(r));
+        clearAuth();
+        resetLiveSession();
+        enterLanding();
+      } else showToast(getMessage(r), 'error');
+    } catch (err) { showToast(err.message || '网络错误', 'error'); }
+  });
+
+  document.getElementById('form-bind')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const data = validateBindPayload(getFormData(e.target));
+      const needVerify = needsSecurityVerifyForBind(
+        document.getElementById('account-action-modal')?.dataset.bindHint,
+        accountProfile,
+      );
+      const r = await api.bindAccount(data.account, data.verificationCode, needVerify);
+      if (isSuccess(r)) {
+        setHasBoundContact(true);
+        clearVerifyToken();
+        closeAccountModal();
+        showToast(getMessage(r));
+        e.target.reset();
+        await refreshSettingsPage();
+      } else {
+        const msg = getMessage(r);
+        if (msg.includes('二次验证')) showToast('请先完成安全验证后再换绑', 'error');
+        else showToast(msg, 'error');
+      }
+    } catch (err) { showToast(err.message || '网络错误', 'error'); }
+  });
+
+  document.querySelectorAll('[data-close-account-modal]').forEach((el) => {
+    el.addEventListener('click', closeAccountModal);
+  });
+
+  document.getElementById('content-area')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-open-account-modal]');
+    if (!btn) return;
+    handleAccountActionClick(btn.dataset.openAccountModal, btn.dataset.bindHint);
+  });
+
+  bindCodeButtons(document.getElementById('account-action-modal'));
+  setupInputValidation(document.getElementById('account-action-modal'));
 }
 
 function bindCodeButtons(root = document) {
   root.querySelectorAll('.code-btn').forEach((btn) => {
     btn.onclick = async () => {
       const form = btn.closest('form');
-      const account = form.querySelector(`[name="${btn.dataset.target}"]`)?.value.trim();
-      if (!account) { showToast('请先填写账号', 'error'); return; }
+      const field = form.querySelector(`[name="${btn.dataset.target}"]`);
+      const account = (field?.value ?? '').trim();
+      const scene = btn.dataset.scene;
+      if (!account) { showToast('请先选择或填写账号', 'error'); return; }
+      if (!isAccount(account) && scene !== SCENES.REGISTER) {
+        showToast('请输入正确的手机或邮箱', 'error');
+        return;
+      }
+      if (scene === SCENES.REGISTER) {
+        const target = btn.dataset.target;
+        if (target === 'phone' && !isPhone(account)) { showToast('手机号格式不正确', 'error'); return; }
+        if (target === 'email' && !isEmail(account)) { showToast('邮箱格式不正确', 'error'); return; }
+      }
       btn.disabled = true;
       try {
-        const r = await api.sendVerificationCode(account, btn.dataset.scene);
+        const r = await api.sendVerificationCode(account, scene);
         if (isSuccess(r)) { showToast(getMessage(r)); startCooldown(btn); }
         else { showToast(getMessage(r), 'error'); btn.disabled = false; }
       } catch { showToast('网络错误', 'error'); btn.disabled = false; }
@@ -1491,8 +2167,8 @@ function setupAuth() {
     try {
       const r = await api.login(username, password);
       if (isSuccess(r)) {
-        saveToken(r.data);
-        saveUsername(username);
+        saveSessionFromLogin(r.data, username);
+        clearVerifyToken();
         showToast(getMessage(r));
         closeAuthModal();
         updateAccountButton();
@@ -1512,19 +2188,25 @@ function setupAuth() {
   document.getElementById('form-register').addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
-      const r = await api.register(getFormData(e.target));
-      if (isSuccess(r)) { showToast(getMessage(r)); switchAuthTab('login'); e.target.reset(); }
-      else showToast(getMessage(r), 'error');
-    } catch { showToast('网络错误', 'error'); }
+      const payload = buildRegisterPayload(getFormData(e.target));
+      const r = await api.register(payload);
+      if (isSuccess(r)) {
+        if (payload.phone || payload.email) markPendingBoundContact();
+        showToast(getMessage(r));
+        switchAuthTab('login');
+        e.target.reset();
+      } else showToast(getMessage(r), 'error');
+    } catch (err) { showToast(err.message || '网络错误', 'error'); }
   });
 
   document.getElementById('form-forgot').addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
-      const r = await api.forgotPassword(getFormData(e.target));
+      const payload = validateForgotPayload(getFormData(e.target));
+      const r = await api.forgotPassword(payload);
       if (isSuccess(r)) { showToast(getMessage(r)); switchAuthTab('login'); e.target.reset(); }
       else showToast(getMessage(r), 'error');
-    } catch { showToast('网络错误', 'error'); }
+    } catch (err) { showToast(err.message || '网络错误', 'error'); }
   });
 
   bindCodeButtons(document.getElementById('auth-modal'));
@@ -1537,9 +2219,7 @@ function setupAuth() {
 async function handleLogout() {
   try { if (isLoggedIn()) await api.logout(); } catch { /* ignore */ }
   clearAuth();
-  appMode = 'demo';
-  liveInstances = [];
-  instancesLoadError = null;
+  resetLiveSession();
   showToast('已退出');
   enterLanding();
 }
@@ -1588,7 +2268,9 @@ function setupApp() {
   });
 
   window.addEventListener('auth:logout', () => {
-    showToast('登录已过期', 'error');
+    clearAuth();
+    resetLiveSession();
+    showToast('登录已过期，请重新登录', 'error');
     enterLanding();
     updateAccountButton();
   });
@@ -1606,6 +2288,8 @@ function setupApp() {
 async function init() {
   setupAuth();
   setupApp();
+  setupAccountModal();
+  restoreSessionFromStorage();
 
   if (isLoggedIn()) {
     await enterMyData();

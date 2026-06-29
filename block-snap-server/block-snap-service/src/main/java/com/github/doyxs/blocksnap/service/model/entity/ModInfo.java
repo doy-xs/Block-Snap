@@ -25,6 +25,8 @@ public class ModInfo {
     private Integer platform;
 
     private String version;
+    private String url;
+    private String icon;
 
     private LocalDateTime createTime;
 

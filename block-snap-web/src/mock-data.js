@@ -145,25 +145,25 @@ export const INSTANCES = [
         totalMs: 38420,
         assets: {
           mods: [
-            { id: 'sodium',        name: 'Sodium',           version: '0.5.11',  addedTime: '2026-05-30', updateTime: '2026-06-07', note: '', isDelete: false, fileHash: 'h001', fileSize: 890240, loadTimeMs: 820,  sourcePlatform: 'MODRINTH',  projectId: 'sodium' },
-            { id: 'lithium',       name: 'Lithium',          version: '0.11.3',  addedTime: '2026-05-30', updateTime: '2026-06-01', note: '', isDelete: false, fileHash: 'h002', fileSize: 720400, loadTimeMs: 640,  sourcePlatform: 'MODRINTH',  projectId: 'lithium' },
-            { id: 'iris',          name: 'Iris',             version: '1.7.2',   addedTime: '2026-05-30', updateTime: '2026-06-07', note: '需配合 Sodium 使用', isDelete: false, fileHash: 'h003', fileSize: 2100500, loadTimeMs: 1120, sourcePlatform: 'MODRINTH',  projectId: 'iris' },
-            { id: 'fabric-api',    name: 'Fabric API',       version: '0.100.8', addedTime: '2026-05-30', updateTime: '2026-06-01', note: '', isDelete: false, fileHash: 'h004', fileSize: 1950300, loadTimeMs: 980,  sourcePlatform: 'MODRINTH',  projectId: 'fabric-api' },
-            { id: 'modmenu',       name: 'Mod Menu',         version: '11.0.1',  addedTime: '2026-05-30', updateTime: '2026-05-30', note: '', isDelete: false, fileHash: 'h005', fileSize: 540200,  loadTimeMs: 310,  sourcePlatform: 'MODRINTH',  projectId: 'modmenu' },
-            { id: 'create',        name: 'Create',           version: '0.5.1f',  addedTime: '2026-05-15', updateTime: '2026-06-07', note: '机械动力核心', isDelete: false, fileHash: 'h006', fileSize: 12800400, loadTimeMs: 4280, sourcePlatform: 'CURSEFORGE', projectId: 'create',   slow: true },
-            { id: 'jei',           name: 'JEI',              version: '15.12.0', addedTime: '2026-05-30', updateTime: '2026-06-01', note: '', isDelete: false, fileHash: 'h007', fileSize: 980300,  loadTimeMs: 1560, sourcePlatform: 'CURSEFORGE', projectId: 'jei' },
-            { id: 'journeymap',    name: 'JourneyMap',       version: '5.10.1',  addedTime: '2026-05-20', updateTime: '2026-06-07', note: '', isDelete: false, fileHash: 'h008', fileSize: 4200100, loadTimeMs: 2340, sourcePlatform: 'CURSEFORGE', projectId: 'journeymap', slow: true },
-            { id: 'cloth-config',  name: 'Cloth Config',     version: '13.0.138',addedTime: '2026-05-30', updateTime: '2026-05-30', note: '', isDelete: false, fileHash: 'h009', fileSize: 640100,  loadTimeMs: 420,  sourcePlatform: 'MODRINTH',  projectId: 'cloth-config' },
-            { id: 'appleskin',     name: 'AppleSkin',        version: '2.5.1',   addedTime: '2026-06-05', updateTime: '2026-06-05', note: '', isDelete: false, fileHash: 'h010', fileSize: 180200,  loadTimeMs: 180,  sourcePlatform: 'MODRINTH',  projectId: 'appleskin' },
-            { id: 'xaeros-minimap',name: 'Xaero\'s Minimap',  version: '24.2.0',  addedTime: '2026-05-30', updateTime: '2026-06-01', note: '', isDelete: false, fileHash: 'h011', fileSize: 780300,  loadTimeMs: 1890, sourcePlatform: 'CURSEFORGE', projectId: 'xaero-minimap' },
-            { id: 'optifine',      name: 'OptiFine',         version: 'HD_U_G5', addedTime: '2026-04-10', updateTime: '2026-05-30', note: '已移除，与 Sodium 冲突', isDelete: true, fileHash: 'h012_del', fileSize: 2100400, loadTimeMs: 0, sourcePlatform: 'CURSEFORGE', projectId: 'optifine' },
+            { id: 'sodium',        name: 'Sodium',           version: '0.5.11',  addedTime: '2026-05-30', updateTime: '2026-06-07', note: '', isDeleted: false, fileHash: 'h001', fileSize: 890240, loadTimeMs: 820,  sourcePlatform: 'MODRINTH',  projectId: 'sodium' },
+            { id: 'lithium',       name: 'Lithium',          version: '0.11.3',  addedTime: '2026-05-30', updateTime: '2026-06-01', note: '', isDeleted: false, fileHash: 'h002', fileSize: 720400, loadTimeMs: 640,  sourcePlatform: 'MODRINTH',  projectId: 'lithium' },
+            { id: 'iris',          name: 'Iris',             version: '1.7.2',   addedTime: '2026-05-30', updateTime: '2026-06-07', note: '需配合 Sodium 使用', isDeleted: false, fileHash: 'h003', fileSize: 2100500, loadTimeMs: 1120, sourcePlatform: 'MODRINTH',  projectId: 'iris' },
+            { id: 'fabric-api',    name: 'Fabric API',       version: '0.100.8', addedTime: '2026-05-30', updateTime: '2026-06-01', note: '', isDeleted: false, fileHash: 'h004', fileSize: 1950300, loadTimeMs: 980,  sourcePlatform: 'MODRINTH',  projectId: 'fabric-api' },
+            { id: 'modmenu',       name: 'Mod Menu',         version: '11.0.1',  addedTime: '2026-05-30', updateTime: '2026-05-30', note: '', isDeleted: false, fileHash: 'h005', fileSize: 540200,  loadTimeMs: 310,  sourcePlatform: 'MODRINTH',  projectId: 'modmenu' },
+            { id: 'create',        name: 'Create',           version: '0.5.1f',  addedTime: '2026-05-15', updateTime: '2026-06-07', note: '机械动力核心', isDeleted: false, fileHash: 'h006', fileSize: 12800400, loadTimeMs: 4280, sourcePlatform: 'CURSEFORGE', projectId: 'create',   slow: true },
+            { id: 'jei',           name: 'JEI',              version: '15.12.0', addedTime: '2026-05-30', updateTime: '2026-06-01', note: '', isDeleted: false, fileHash: 'h007', fileSize: 980300,  loadTimeMs: 1560, sourcePlatform: 'CURSEFORGE', projectId: 'jei' },
+            { id: 'journeymap',    name: 'JourneyMap',       version: '5.10.1',  addedTime: '2026-05-20', updateTime: '2026-06-07', note: '', isDeleted: false, fileHash: 'h008', fileSize: 4200100, loadTimeMs: 2340, sourcePlatform: 'CURSEFORGE', projectId: 'journeymap', slow: true },
+            { id: 'cloth-config',  name: 'Cloth Config',     version: '13.0.138',addedTime: '2026-05-30', updateTime: '2026-05-30', note: '', isDeleted: false, fileHash: 'h009', fileSize: 640100,  loadTimeMs: 420,  sourcePlatform: 'MODRINTH',  projectId: 'cloth-config' },
+            { id: 'appleskin',     name: 'AppleSkin',        version: '2.5.1',   addedTime: '2026-06-05', updateTime: '2026-06-05', note: '', isDeleted: false, fileHash: 'h010', fileSize: 180200,  loadTimeMs: 180,  sourcePlatform: 'MODRINTH',  projectId: 'appleskin' },
+            { id: 'xaeros-minimap',name: 'Xaero\'s Minimap',  version: '24.2.0',  addedTime: '2026-05-30', updateTime: '2026-06-01', note: '', isDeleted: false, fileHash: 'h011', fileSize: 780300,  loadTimeMs: 1890, sourcePlatform: 'CURSEFORGE', projectId: 'xaero-minimap' },
+            { id: 'optifine',      name: 'OptiFine',         version: 'HD_U_G5', addedTime: '2026-04-10', updateTime: '2026-05-30', note: '已移除，与 Sodium 冲突', isDeleted: true, fileHash: 'h012_del', fileSize: 2100400, loadTimeMs: 0, sourcePlatform: 'CURSEFORGE', projectId: 'optifine' },
           ],
           resourcePacks: [
-            { id: 'rp-fresh',      name: 'Fresh Animations',  version: '1.9.2', packFormat: 15, addedTime: '2026-05-29', updateTime: '2026-06-07', note: '', isDelete: false, fileHash: 'rh001', fileSize: 8400200,  sourcePlatform: 'MODRINTH' },
-            { id: 'rp-dark',       name: 'Default Dark Mode',  version: '3.9.4', packFormat: 15, addedTime: '2026-05-18', updateTime: '2026-06-01', note: '深色主题覆盖', isDelete: false, fileHash: 'rh002', fileSize: 1200300, sourcePlatform: 'CURSEFORGE' },
+            { id: 'rp-fresh',      name: 'Fresh Animations',  version: '1.9.2', packFormat: 15, addedTime: '2026-05-29', updateTime: '2026-06-07', note: '', isDeleted: false, fileHash: 'rh001', fileSize: 8400200,  sourcePlatform: 'MODRINTH' },
+            { id: 'rp-dark',       name: 'Default Dark Mode',  version: '3.9.4', packFormat: 15, addedTime: '2026-05-18', updateTime: '2026-06-01', note: '深色主题覆盖', isDeleted: false, fileHash: 'rh002', fileSize: 1200300, sourcePlatform: 'CURSEFORGE' },
           ],
           shaderPacks: [
-            { id: 'sp-bsl',        name: 'BSL Shaders',       version: '8.2.07', addedTime: '2026-05-28', updateTime: '2026-06-08', note: '已配置低延迟模式', isDelete: false, fileHash: 'sh001', fileSize: 3200400, shaderLoader: 'IRIS', sourcePlatform: 'CURSEFORGE' },
+            { id: 'sp-bsl',        name: 'BSL Shaders',       version: '8.2.07', addedTime: '2026-05-28', updateTime: '2026-06-08', note: '已配置低延迟模式', isDeleted: false, fileHash: 'sh001', fileSize: 3200400, shaderLoader: 'IRIS', sourcePlatform: 'CURSEFORGE' },
           ],
           configs: [
             { relativePath: 'config/sodium-options.json',   fileHash: 'abc123_v3',  format: 'json', associatedModId: 'sodium',       fileSize: 2400, addedTime: '2026-05-30', updateTime: '2026-06-07' },
@@ -183,18 +183,18 @@ export const INSTANCES = [
         totalMs: 35100,
         assets: {
           mods: [
-            { id: 'sodium',       name: 'Sodium',          version: '0.5.11',  addedTime: '2026-05-30', updateTime: '2026-06-01', note: '', isDelete: false, fileHash: 'h001', fileSize: 890240, loadTimeMs: 790, sourcePlatform: 'MODRINTH', projectId: 'sodium' },
-            { id: 'create',       name: 'Create',          version: '0.5.1f',   addedTime: '2026-05-15', updateTime: '2026-06-07', note: '机械动力核心', isDelete: false, fileHash: 'h006', fileSize: 12800400, loadTimeMs: 4010, sourcePlatform: 'CURSEFORGE', projectId: 'create', slow: true },
-            { id: 'journeymap',   name: 'JourneyMap',      version: '5.10.0',   addedTime: '2026-05-20', updateTime: '2026-06-01', note: '', isDelete: false, fileHash: 'h008_old', fileSize: 4100100, loadTimeMs: 2180, sourcePlatform: 'CURSEFORGE', projectId: 'journeymap', slow: true },
-            { id: 'jei',          name: 'JEI',             version: '15.12.0',  addedTime: '2026-05-30', updateTime: '2026-06-01', note: '', isDelete: false, fileHash: 'h007', fileSize: 980300, loadTimeMs: 1520, sourcePlatform: 'CURSEFORGE', projectId: 'jei' },
-            { id: 'optifine',     name: 'OptiFine',        version: 'HD_U_G5',  addedTime: '2026-04-10', updateTime: '2026-05-30', note: '已移除', isDelete: false, fileHash: 'h012', fileSize: 2100400, loadTimeMs: 3800, sourcePlatform: 'CURSEFORGE', projectId: 'optifine', slow: true },
-            { id: 'appleskin',    name: 'AppleSkin',       version: '2.5.0',    addedTime: '2026-06-05', updateTime: '2026-06-05', note: '', isDelete: false, fileHash: 'h010_old', fileSize: 175000, loadTimeMs: 170, sourcePlatform: 'MODRINTH', projectId: 'appleskin' },
+            { id: 'sodium',       name: 'Sodium',          version: '0.5.11',  addedTime: '2026-05-30', updateTime: '2026-06-01', note: '', isDeleted: false, fileHash: 'h001', fileSize: 890240, loadTimeMs: 790, sourcePlatform: 'MODRINTH', projectId: 'sodium' },
+            { id: 'create',       name: 'Create',          version: '0.5.1f',   addedTime: '2026-05-15', updateTime: '2026-06-07', note: '机械动力核心', isDeleted: false, fileHash: 'h006', fileSize: 12800400, loadTimeMs: 4010, sourcePlatform: 'CURSEFORGE', projectId: 'create', slow: true },
+            { id: 'journeymap',   name: 'JourneyMap',      version: '5.10.0',   addedTime: '2026-05-20', updateTime: '2026-06-01', note: '', isDeleted: false, fileHash: 'h008_old', fileSize: 4100100, loadTimeMs: 2180, sourcePlatform: 'CURSEFORGE', projectId: 'journeymap', slow: true },
+            { id: 'jei',          name: 'JEI',             version: '15.12.0',  addedTime: '2026-05-30', updateTime: '2026-06-01', note: '', isDeleted: false, fileHash: 'h007', fileSize: 980300, loadTimeMs: 1520, sourcePlatform: 'CURSEFORGE', projectId: 'jei' },
+            { id: 'optifine',     name: 'OptiFine',        version: 'HD_U_G5',  addedTime: '2026-04-10', updateTime: '2026-05-30', note: '已移除', isDeleted: false, fileHash: 'h012', fileSize: 2100400, loadTimeMs: 3800, sourcePlatform: 'CURSEFORGE', projectId: 'optifine', slow: true },
+            { id: 'appleskin',    name: 'AppleSkin',       version: '2.5.0',    addedTime: '2026-06-05', updateTime: '2026-06-05', note: '', isDeleted: false, fileHash: 'h010_old', fileSize: 175000, loadTimeMs: 170, sourcePlatform: 'MODRINTH', projectId: 'appleskin' },
           ],
           resourcePacks: [
-            { id: 'rp-fresh',     name: 'Fresh Animations', version: '1.9.1', packFormat: 14, addedTime: '2026-05-29', updateTime: '2026-06-01', note: '', isDelete: false, fileHash: 'rh001_old', fileSize: 8300100, sourcePlatform: 'MODRINTH' },
+            { id: 'rp-fresh',     name: 'Fresh Animations', version: '1.9.1', packFormat: 14, addedTime: '2026-05-29', updateTime: '2026-06-01', note: '', isDeleted: false, fileHash: 'rh001_old', fileSize: 8300100, sourcePlatform: 'MODRINTH' },
           ],
           shaderPacks: [
-            { id: 'sp-bsl',       name: 'BSL Shaders',      version: '8.2.06', addedTime: '2026-05-28', updateTime: '2026-06-01', note: '', isDelete: false, fileHash: 'sh001_old', fileSize: 3100100, shaderLoader: 'IRIS', sourcePlatform: 'CURSEFORGE' },
+            { id: 'sp-bsl',       name: 'BSL Shaders',      version: '8.2.06', addedTime: '2026-05-28', updateTime: '2026-06-01', note: '', isDeleted: false, fileHash: 'sh001_old', fileSize: 3100100, shaderLoader: 'IRIS', sourcePlatform: 'CURSEFORGE' },
           ],
           configs: [
             { relativePath: 'config/sodium-options.json',  fileHash: 'abc123_v2', format: 'json',  associatedModId: 'sodium',    fileSize: 2300, addedTime: '2026-05-30', updateTime: '2026-06-01' },
@@ -209,16 +209,16 @@ export const INSTANCES = [
         totalMs: 36800,
         assets: {
           mods: [
-            { id: 'sodium',      name: 'Sodium',         version: '0.5.10', addedTime: '2026-05-30', updateTime: '2026-05-30', note: '', isDelete: false, fileHash: 'h001_old2', fileSize: 880240, loadTimeMs: 860, sourcePlatform: 'MODRINTH', projectId: 'sodium' },
-            { id: 'create',      name: 'Create',         version: '0.5.1f',  addedTime: '2026-05-15', updateTime: '2026-05-15', note: '机械动力核心', isDelete: false, fileHash: 'h006', fileSize: 12800400, loadTimeMs: 4150, sourcePlatform: 'CURSEFORGE', projectId: 'create', slow: true },
-            { id: 'optifine',    name: 'OptiFine',       version: 'HD_U_G5', addedTime: '2026-04-10', updateTime: '2026-04-10', note: '', isDelete: false, fileHash: 'h012', fileSize: 2100400, loadTimeMs: 4200, sourcePlatform: 'CURSEFORGE', projectId: 'optifine', slow: true },
-            { id: 'journeymap',  name: 'JourneyMap',     version: '5.9.3',   addedTime: '2026-05-20', updateTime: '2026-05-20', note: '', isDelete: false, fileHash: 'h008_v1', fileSize: 4000100, loadTimeMs: 2250, sourcePlatform: 'CURSEFORGE', projectId: 'journeymap', slow: true },
+            { id: 'sodium',      name: 'Sodium',         version: '0.5.10', addedTime: '2026-05-30', updateTime: '2026-05-30', note: '', isDeleted: false, fileHash: 'h001_old2', fileSize: 880240, loadTimeMs: 860, sourcePlatform: 'MODRINTH', projectId: 'sodium' },
+            { id: 'create',      name: 'Create',         version: '0.5.1f',  addedTime: '2026-05-15', updateTime: '2026-05-15', note: '机械动力核心', isDeleted: false, fileHash: 'h006', fileSize: 12800400, loadTimeMs: 4150, sourcePlatform: 'CURSEFORGE', projectId: 'create', slow: true },
+            { id: 'optifine',    name: 'OptiFine',       version: 'HD_U_G5', addedTime: '2026-04-10', updateTime: '2026-04-10', note: '', isDeleted: false, fileHash: 'h012', fileSize: 2100400, loadTimeMs: 4200, sourcePlatform: 'CURSEFORGE', projectId: 'optifine', slow: true },
+            { id: 'journeymap',  name: 'JourneyMap',     version: '5.9.3',   addedTime: '2026-05-20', updateTime: '2026-05-20', note: '', isDeleted: false, fileHash: 'h008_v1', fileSize: 4000100, loadTimeMs: 2250, sourcePlatform: 'CURSEFORGE', projectId: 'journeymap', slow: true },
           ],
           resourcePacks: [
-            { id: 'rp-fresh',    name: 'Fresh Animations', version: '1.8.0', packFormat: 12, addedTime: '2026-05-29', updateTime: '2026-05-29', note: '', isDelete: false, fileHash: 'rh001_v1', fileSize: 8100100, sourcePlatform: 'MODRINTH' },
+            { id: 'rp-fresh',    name: 'Fresh Animations', version: '1.8.0', packFormat: 12, addedTime: '2026-05-29', updateTime: '2026-05-29', note: '', isDeleted: false, fileHash: 'rh001_v1', fileSize: 8100100, sourcePlatform: 'MODRINTH' },
           ],
           shaderPacks: [
-            { id: 'sp-comp',     name: 'Complementary Reimagined', version: '5.2.1', addedTime: '2026-05-20', updateTime: '2026-06-01', note: '', isDelete: false, fileHash: 'sh002', fileSize: 4500100, shaderLoader: 'IRIS', sourcePlatform: 'CURSEFORGE' },
+            { id: 'sp-comp',     name: 'Complementary Reimagined', version: '5.2.1', addedTime: '2026-05-20', updateTime: '2026-06-01', note: '', isDeleted: false, fileHash: 'sh002', fileSize: 4500100, shaderLoader: 'IRIS', sourcePlatform: 'CURSEFORGE' },
           ],
           configs: [
             { relativePath: 'config/sodium-options.json',  fileHash: 'abc123_v1', format: 'json',  associatedModId: 'sodium',    fileSize: 2100, addedTime: '2026-05-30', updateTime: '2026-05-30' },
@@ -248,19 +248,19 @@ export const INSTANCES = [
         totalMs: 68200,
         assets: {
           mods: [
-            { id: 'cobblemon',         name: 'Cobblemon',           version: '1.5.2',   addedTime: '2026-06-01', updateTime: '2026-06-05', note: '核心宝可梦模组', isDelete: false, fileHash: 'h101', fileSize: 28400100, loadTimeMs: 8920, sourcePlatform: 'MODRINTH', projectId: 'cobblemon', slow: true },
-            { id: 'biomes-o-plenty',   name: 'Biomes O\' Plenty',   version: '18.0.0',   addedTime: '2026-06-01', updateTime: '2026-06-01', note: '', isDelete: false, fileHash: 'h102', fileSize: 15200300, loadTimeMs: 5640, sourcePlatform: 'CURSEFORGE', projectId: 'biomes-o-plenty', slow: true },
-            { id: 'sodium',            name: 'Sodium',              version: '0.5.11',   addedTime: '2026-06-01', updateTime: '2026-06-01', note: '', isDelete: false, fileHash: 'h103', fileSize: 890240,   loadTimeMs: 910,  sourcePlatform: 'MODRINTH', projectId: 'sodium' },
-            { id: 'fabric-api',        name: 'Fabric API',          version: '0.92.2',   addedTime: '2026-06-01', updateTime: '2026-06-01', note: '', isDelete: false, fileHash: 'h104', fileSize: 1900400,  loadTimeMs: 1020, sourcePlatform: 'MODRINTH', projectId: 'fabric-api' },
-            { id: 'jei',               name: 'JEI',                 version: '15.12.0',  addedTime: '2026-06-01', updateTime: '2026-06-01', note: '', isDelete: false, fileHash: 'h105', fileSize: 980300,   loadTimeMs: 1480, sourcePlatform: 'CURSEFORGE', projectId: 'jei' },
-            { id: 'journeymap',        name: 'JourneyMap',          version: '5.10.1',   addedTime: '2026-06-01', updateTime: '2026-06-01', note: '', isDelete: false, fileHash: 'h106', fileSize: 4200100,  loadTimeMs: 2180, sourcePlatform: 'CURSEFORGE', projectId: 'journeymap' },
+            { id: 'cobblemon',         name: 'Cobblemon',           version: '1.5.2',   addedTime: '2026-06-01', updateTime: '2026-06-05', note: '核心宝可梦模组', isDeleted: false, fileHash: 'h101', fileSize: 28400100, loadTimeMs: 8920, sourcePlatform: 'MODRINTH', projectId: 'cobblemon', slow: true },
+            { id: 'biomes-o-plenty',   name: 'Biomes O\' Plenty',   version: '18.0.0',   addedTime: '2026-06-01', updateTime: '2026-06-01', note: '', isDeleted: false, fileHash: 'h102', fileSize: 15200300, loadTimeMs: 5640, sourcePlatform: 'CURSEFORGE', projectId: 'biomes-o-plenty', slow: true },
+            { id: 'sodium',            name: 'Sodium',              version: '0.5.11',   addedTime: '2026-06-01', updateTime: '2026-06-01', note: '', isDeleted: false, fileHash: 'h103', fileSize: 890240,   loadTimeMs: 910,  sourcePlatform: 'MODRINTH', projectId: 'sodium' },
+            { id: 'fabric-api',        name: 'Fabric API',          version: '0.92.2',   addedTime: '2026-06-01', updateTime: '2026-06-01', note: '', isDeleted: false, fileHash: 'h104', fileSize: 1900400,  loadTimeMs: 1020, sourcePlatform: 'MODRINTH', projectId: 'fabric-api' },
+            { id: 'jei',               name: 'JEI',                 version: '15.12.0',  addedTime: '2026-06-01', updateTime: '2026-06-01', note: '', isDeleted: false, fileHash: 'h105', fileSize: 980300,   loadTimeMs: 1480, sourcePlatform: 'CURSEFORGE', projectId: 'jei' },
+            { id: 'journeymap',        name: 'JourneyMap',          version: '5.10.1',   addedTime: '2026-06-01', updateTime: '2026-06-01', note: '', isDeleted: false, fileHash: 'h106', fileSize: 4200100,  loadTimeMs: 2180, sourcePlatform: 'CURSEFORGE', projectId: 'journeymap' },
           ],
           resourcePacks: [
-            { id: 'rp-cobble',    name: 'Cobblemon RP',         version: '1.4',   packFormat: 12, addedTime: '2026-06-01', updateTime: '2026-06-05', note: '', isDelete: false, fileHash: 'rh101', fileSize: 48001200, sourcePlatform: 'MODRINTH' },
-            { id: 'rp-3d',        name: 'Cobblemon 3D Models',  version: '2.1',   packFormat: 12, addedTime: '2026-06-01', updateTime: '2026-06-01', note: '', isDelete: false, fileHash: 'rh102', fileSize: 92001000, sourcePlatform: 'CURSEFORGE' },
+            { id: 'rp-cobble',    name: 'Cobblemon RP',         version: '1.4',   packFormat: 12, addedTime: '2026-06-01', updateTime: '2026-06-05', note: '', isDeleted: false, fileHash: 'rh101', fileSize: 48001200, sourcePlatform: 'MODRINTH' },
+            { id: 'rp-3d',        name: 'Cobblemon 3D Models',  version: '2.1',   packFormat: 12, addedTime: '2026-06-01', updateTime: '2026-06-01', note: '', isDeleted: false, fileHash: 'rh102', fileSize: 92001000, sourcePlatform: 'CURSEFORGE' },
           ],
           shaderPacks: [
-            { id: 'sp-makeup',    name: 'MakeUp Ultra Fast',    version: '9.1',   addedTime: '2026-06-01', updateTime: '2026-06-05', note: '', isDelete: false, fileHash: 'sh101', fileSize: 2800400, shaderLoader: 'IRIS', sourcePlatform: 'MODRINTH' },
+            { id: 'sp-makeup',    name: 'MakeUp Ultra Fast',    version: '9.1',   addedTime: '2026-06-01', updateTime: '2026-06-05', note: '', isDeleted: false, fileHash: 'sh101', fileSize: 2800400, shaderLoader: 'IRIS', sourcePlatform: 'MODRINTH' },
           ],
           configs: [
             { relativePath: 'config/cobblemon/main.json',           fileHash: 'cfg001', format: 'json', associatedModId: 'cobblemon',       fileSize: 5600, addedTime: '2026-06-01', updateTime: '2026-06-05' },
@@ -607,11 +607,11 @@ export function getInstanceAssetSummary(instance) {
   const latest = getLatestSnapshot(instance);
   if (!latest) return null;
   return {
-    modCount: latest.assets.mods.filter((m) => !m.isDelete).length,
-    rpCount: latest.assets.resourcePacks.filter((r) => !r.isDelete).length,
-    spCount: latest.assets.shaderPacks.filter((s) => !s.isDelete).length,
+    modCount: latest.assets.mods.filter((m) => !m.isDeleted).length,
+    rpCount: latest.assets.resourcePacks.filter((r) => !r.isDeleted).length,
+    spCount: latest.assets.shaderPacks.filter((s) => !s.isDeleted).length,
     configCount: latest.assets.configs.length,
-    deletedCount: latest.assets.mods.filter((m) => m.isDelete).length,
+    deletedCount: latest.assets.mods.filter((m) => m.isDeleted).length,
     lastLaunch: latest.timestamp,
     totalMs: latest.totalMs,
   };

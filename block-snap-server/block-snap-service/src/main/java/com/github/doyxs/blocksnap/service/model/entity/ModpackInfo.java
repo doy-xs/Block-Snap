@@ -12,7 +12,6 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("modpack_info")
 public class ModpackInfo {
 
     @TableId(type = IdType.AUTO)

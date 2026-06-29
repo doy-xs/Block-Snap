@@ -111,7 +111,7 @@ Account（账户）
                     └── Config
 ```
 
-每次快照包含运行环境上下文（MC 版本、加载器版本、Java 版本、操作系统）及五类资产的完整状态。各资产共享统一追踪维度：`version`、`addedTime`、`updateTime`、`note`、`isDelete`。
+每次快照包含运行环境上下文（MC 版本、加载器版本、Java 版本、操作系统）及五类资产的完整状态。各资产共享统一追踪维度：`version`、`addedTime`、`updateTime`、`note`、`isDeleted`。
 
 后端已实现模组维度的核心表结构：
 

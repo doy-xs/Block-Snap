@@ -13,13 +13,10 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("snapshot")
 public class Snapshot {
 
-    @TableId(type = IdType.AUTO)
     private Integer id;
 
-    @TableField("instance_id")
     private Integer instanceId;
 
     private String mcVersion;

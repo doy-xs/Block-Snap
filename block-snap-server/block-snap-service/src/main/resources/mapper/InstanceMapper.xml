@@ -9,7 +9,7 @@
         snapshot       : mcVersion/loaderType/loaderVersion/javaVersion/totalLoadMs/lastLaunch
                          取该实例 snapshot_time 最新的一条
         modpack_info   : modpackName, modpackVersion, modpackPlatform
-        modCount       : 最新 snapshot 下活跃(mod_snapshot.is_delete=0)的模组数
+        modCount       : 最新 snapshot 下活跃(mod_snapshot.is_deleted=0)的模组数
         updateCount    : 最新 snapshot 与上一条 snapshot 之间，模组(按 mod_info_id 关联)的
                          新增 + 移除 + 版本/哈希变动 的总数；无上一条 snapshot 时为 0
         resourceCount / shaderCount : 暂未实现，固定 0
@@ -53,15 +53,15 @@
              latest_mods AS (SELECT ls.instance_id, ms.mod_info_id, ms.version, ms.mod_hash
                              FROM latest_snapshot ls
                                       JOIN mod_snapshot ms ON ms.snapshot_id = ls.id
-                             WHERE ms.is_delete = 0
-                                OR ms.is_delete IS NULL
-                                OR ms.is_delete = 2),
+                             WHERE ms.is_deleted = 0
+                                OR ms.is_deleted IS NULL
+                                OR ms.is_deleted = 2),
              prev_mods AS (SELECT ps.instance_id, ms.mod_info_id, ms.version, ms.mod_hash
                            FROM prev_snapshot ps
                                     JOIN mod_snapshot ms ON ms.snapshot_id = ps.id
-                           WHERE ms.is_delete = 0
-                              OR ms.is_delete IS NULL
-                              OR ms.is_delete = 2),
+                           WHERE ms.is_deleted = 0
+                              OR ms.is_deleted IS NULL
+                              OR ms.is_deleted = 2),
              mark_ranked AS (SELECT target_id,
                                     favorite,
                                     note,

@@ -23,7 +23,7 @@ Account → Instance → Snapshot[] → 五类资产 (Mod/ResourcePack/ShaderPac
 
 ## 资产统合字段
 
-每种资产共享五字段追踪：`version` `addedTime` `updateTime` `note` `isDelete`
+每种资产共享五字段追踪：`version` `addedTime` `updateTime` `note` `isDeleted`
 
 ## 演示数据
 
@@ -44,7 +44,22 @@ npm run dev
 - 前端：http://localhost:5173
 - 后端网关代理：`/sys-user` → http://localhost
 
-## 后续对接
+## 已对接后端 API
+
+| 模块 | 方法 | 路径 | 说明 |
+|------|------|------|------|
+| 用户 | GET | `/sys-user/getAccount` | 账户信息（脱敏/验证后完整） |
+| 用户 | POST | `/sys-user/login` 等 | 登录、注册、安全验证、换绑 |
+| 实例 | GET | `/svc-instance/list` | 用户实例列表 |
+| 实例 | PUT | `/svc-instance/favorite` | `{ instanceId, favorite }` |
+| 实例 | PUT | `/svc-instance/note` | `{ instanceId, note }` |
+| 模组 | GET | `/svc-mod/list?instanceId=` | 最新快照模组列表，`ModVo.id` = `mod_snapshot.id` |
+| 模组 | PUT | `/svc-mod/favorite` | `{ modId, favorite }`，`modId` 为 `mod_snapshot.id` |
+| 模组 | PUT | `/svc-mod/note` | `{ modId, note }`，`modId` 为 `mod_snapshot.id` |
+
+网关代理：`/sys-user`、`/svc-instance`、`/svc-mod` → `http://localhost`
+
+## 后续对接（演示数据 / 未实现）
 
 后端需提供基于 Instance/Snapshot 模型的 API：
 

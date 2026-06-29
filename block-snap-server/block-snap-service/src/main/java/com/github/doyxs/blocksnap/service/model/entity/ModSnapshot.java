@@ -12,10 +12,8 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("mod_snapshot")
 public class ModSnapshot {
 
-    @TableId(type = IdType.AUTO)
     private Integer id;
 
     private Integer snapshotId;
@@ -28,7 +26,7 @@ public class ModSnapshot {
 
     private Long loadTime;
 
-    private Integer isDelete;
+    private Integer isDeleted;
 
     private LocalDateTime addedTime;
 

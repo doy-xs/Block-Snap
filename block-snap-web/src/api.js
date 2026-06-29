@@ -1,4 +1,14 @@
+import { clearAuth, getToken, getVerifyToken } from './auth.js';
+
 const API_BASE = import.meta.env.VITE_API_BASE ?? '';
+
+/** 网关白名单：无需 Authorization */
+const PUBLIC_PATHS = new Set([
+  '/sys-user/login',
+  '/sys-user/register',
+  '/sys-user/send-verification-code',
+  '/sys-user/forgot-password',
+]);
 
 async function request(path, options = {}) {
   const { auth = false, verify = false, body, ...rest } = options;
@@ -6,12 +16,18 @@ async function request(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...(rest.headers || {}) };
 
   if (auth) {
-    const token = localStorage.getItem('token');
-    if (token) headers['Authorization'] = token;
+    const token = getToken();
+    if (!token) {
+      return { code: 401, message: '请先登录' };
+    }
+    headers.Authorization = token;
   }
   if (verify) {
-    const verifyToken = localStorage.getItem('verifyToken');
-    if (verifyToken) headers['Verify-Token'] = verifyToken;
+    const verifyToken = getVerifyToken();
+    if (!verifyToken) {
+      return { code: 500, message: '缺少二次验证凭证，请先完成安全验证' };
+    }
+    headers['Verify-Token'] = verifyToken;
   }
 
   const res = await fetch(`${API_BASE}${path}`, {
@@ -23,8 +39,7 @@ async function request(path, options = {}) {
   const json = await res.json().catch(() => ({}));
 
   if (res.status === 401) {
-    localStorage.removeItem('token');
-    localStorage.removeItem('verifyToken');
+    clearAuth();
     window.dispatchEvent(new Event('auth:logout'));
   }
 
@@ -65,11 +80,40 @@ export const api = {
       body: { account, verificationCode },
     }),
 
-  /** 登录后：当前用户的实例列表 */
+  /**
+   * GET /sys-user/getAccount
+   * @param {{ verify?: boolean }} options verify=true 时携带 Verify-Token，返回完整手机/邮箱
+   */
+  getAccount: (options = {}) =>
+    request('/sys-user/getAccount', {
+      method: 'GET',
+      auth: true,
+      verify: !!options.verify,
+    }),
+
+  /** 登录后：当前用户的实例列表 GET /svc-instance/list */
   listInstances: () =>
     request('/svc-instance/list', { method: 'GET', auth: true }),
 
-  /** 实例收藏 PUT /svc-instance/favorite */
+  /**
+   * 指定实例最新快照下的模组列表 GET /svc-mod/list?instanceId=
+   * @param {number} instanceId 实例 id（instance.id）
+   * @returns {Promise<{code:number,message?:string,data?:Array<{
+   *   id:number, name:string, version:string,
+   *   isNewVersion:number, isDeleted:number, loadTime:number,
+   *   favorite:number, note:string,
+   *   addedTime:string, updateTime:string
+   * }>}>}
+   * ModVo.id = mod_snapshot.id；收藏/备注接口的 modId 即此 id。
+   */
+  listMods: (instanceId) =>
+    request(`/svc-mod/list?instanceId=${instanceId}`, { method: 'GET', auth: true }),
+
+  /**
+   * 实例收藏 PUT /svc-instance/favorite
+   * @param {number} instanceId instance.id
+   * @param {0|1} favorite
+   */
   updateInstanceFavorite: (instanceId, favorite) =>
     request('/svc-instance/favorite', {
       method: 'PUT',
@@ -77,7 +121,11 @@ export const api = {
       body: { instanceId, favorite },
     }),
 
-  /** 实例备注 PUT /svc-instance/note */
+  /**
+   * 实例备注 PUT /svc-instance/note
+   * @param {number} instanceId instance.id
+   * @param {string} note
+   */
   updateInstanceNote: (instanceId, note) =>
     request('/svc-instance/note', {
       method: 'PUT',
@@ -85,20 +133,28 @@ export const api = {
       body: { instanceId, note },
     }),
 
-  /** 模组收藏（预留）PUT /svc-mod/favorite */
-  updateModFavorite: (modSnapshotId, favorite) =>
+  /**
+   * 模组收藏 PUT /svc-mod/favorite
+   * @param {number} modId mod_snapshot.id（来自 listMods 返回的 ModVo.id）
+   * @param {0|1} favorite
+   */
+  updateModFavorite: (modId, favorite) =>
     request('/svc-mod/favorite', {
       method: 'PUT',
       auth: true,
-      body: { modSnapshotId, favorite },
+      body: { modId, favorite },
     }),
 
-  /** 模组备注（预留）PUT /svc-mod/note */
-  updateModNote: (modSnapshotId, note) =>
+  /**
+   * 模组备注 PUT /svc-mod/note
+   * @param {number} modId mod_snapshot.id（来自 listMods 返回的 ModVo.id）
+   * @param {string} note
+   */
+  updateModNote: (modId, note) =>
     request('/svc-mod/note', {
       method: 'PUT',
       auth: true,
-      body: { modSnapshotId, note },
+      body: { modId, note },
     }),
 };
 
@@ -135,4 +191,8 @@ export function getMessage(result) {
   if (result?.message) return result.message;
   if (result?.error) return result.error;
   return '请求失败';
+}
+
+export function isPublicPath(path) {
+  return PUBLIC_PATHS.has(path);
 }

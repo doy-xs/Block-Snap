@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.github.doyxs.blocksnap.service.mapper.ModInfoMapper">
+
+    <!--
+      收藏/备注：部分更新 block_snap_system.sys_user_mark（跨库，走 service 数据源）。
+      target_id = mod_snapshot.id，target_type = 2(MOD)。
+      favorite 操作只传 favorite，note 操作只传 note；为 null 的列不参与更新。
+    -->
+    <update id="updateModMark">
+        UPDATE block_snap_system.sys_user_mark
+        <set>
+            <if test="favorite != null">favorite = #{favorite},</if>
+            <if test="note != null">note = #{note},</if>
+            update_time = NOW()
+        </set>
+        WHERE user_id = #{userId}
+          AND target_id = #{modId}
+          AND target_type = #{targetType}
+    </update>
+
+    <!--
+      首次标记时插入。create_time / update_time 用表默认值；
+      favorite 不传则用列默认值 0，note 不传则为 NULL。
+    -->
+    <insert id="insertModMark">
+        INSERT INTO block_snap_system.sys_user_mark
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            user_id, target_id, target_type,
+            <if test="favorite != null">favorite,</if>
+            <if test="note != null">note,</if>
+        </trim>
+        <trim prefix="VALUES (" suffix=")" suffixOverrides=",">
+            #{userId}, #{modId}, #{targetType},
+            <if test="favorite != null">#{favorite},</if>
+            <if test="note != null">#{note},</if>
+        </trim>
+    </insert>
+
+</mapper>

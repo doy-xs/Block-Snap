@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.github.doyxs.blocksnap.service.mapper.ModSnapshotMapper">
+
+    <!--
+      返回 ModVo 列表：指定实例「最新快照」下的模组（每行 = 一条 mod_snapshot）。
+
+      ModVo.id           : mod_snapshot.id
+      favorite/note      : block_snap_system.sys_user_mark（target_type=2, target_id=mod_snapshot.id）
+    -->
+    <select id="selectListByInstanceId" resultType="com.github.doyxs.blocksnap.service.model.vo.ModVo">
+        <![CDATA[
+        WITH target_instance AS (SELECT id
+                                 FROM instance
+                                 WHERE id = #{instanceId}
+                                   AND user_id = #{userId}
+                                   AND is_deleted = 0),
+             latest_snapshot AS (SELECT s.id
+                                 FROM snapshot s
+                                          JOIN target_instance ti ON ti.id = s.instance_id
+                                 ORDER BY s.snapshot_time DESC, s.id DESC
+                                 LIMIT 1),
+             mark_ranked AS (SELECT target_id,
+                                    favorite,
+                                    note,
+                                    ROW_NUMBER() OVER (
+                                        PARTITION BY target_id
+                                        ORDER BY update_time DESC, id DESC
+                                        ) AS rn
+                             FROM block_snap_system.sys_user_mark
+                             WHERE user_id = #{userId}
+                               AND target_type = 2),
+             latest_mark AS (SELECT target_id, favorite, note
+                             FROM mark_ranked
+                             WHERE rn = 1)
+        SELECT ms.id                AS id,
+               mi.name              AS name,
+               ms.version           AS version,
+               CASE
+                   WHEN mi.version IS NOT NULL
+                       AND ms.version IS NOT NULL
+                       AND mi.version <> ms.version THEN 2
+                   ELSE 1
+                   END              AS is_new_version,
+               ms.is_deleted        AS is_deleted,
+               ms.load_time         AS load_time,
+               IFNULL(lm.favorite, 0) AS favorite,
+               lm.note              AS note,
+               ms.added_time        AS added_time,
+               ms.update_time       AS update_time
+        FROM mod_snapshot ms
+                 JOIN latest_snapshot ls ON ls.id = ms.snapshot_id
+                 JOIN mod_info mi ON mi.id = ms.mod_info_id
+                 LEFT JOIN latest_mark lm ON lm.target_id = ms.id
+        ORDER BY ms.update_time DESC, ms.id DESC
+        ]]>
+    </select>
+
+</mapper>

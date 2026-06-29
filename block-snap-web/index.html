@@ -177,6 +177,45 @@
       </div>
     </div>
 
+    <!-- 账户操作弹窗（换绑 / 改密） -->
+    <div id="account-action-modal" class="modal hidden">
+      <div class="modal-backdrop" data-close-account-modal></div>
+      <div class="modal-panel">
+        <button type="button" class="modal-close" data-close-account-modal aria-label="关闭">×</button>
+        <h3 id="account-modal-title" class="account-modal-title"></h3>
+        <div id="account-modal-pane-password" class="account-modal-pane hidden">
+          <p id="account-modal-password-hint" class="settings-hint settings-warn hidden">请先在账户页完成安全验证后再修改密码。</p>
+          <form id="form-password" class="settings-form">
+            <label><span>原密码</span><input name="oldPassword" type="password" required /></label>
+            <label><span>新密码</span><input name="newPassword" type="password" required /></label>
+            <label><span>确认新密码</span><input name="confirmNewPassword" type="password" required /></label>
+            <button type="submit" class="btn btn-primary btn-block">保存</button>
+          </form>
+        </div>
+        <div id="account-modal-pane-bind" class="account-modal-pane hidden">
+          <p id="account-modal-bind-hint" class="settings-hint settings-warn hidden">换绑前请先在账户页完成安全验证。</p>
+          <div id="account-modal-current-wrap" class="account-current-field hidden">
+            <span class="account-current-label" id="account-modal-current-label">原手机号</span>
+            <span class="account-current-value" id="account-modal-current-value"></span>
+          </div>
+          <form id="form-bind" class="settings-form">
+            <label>
+              <span id="account-modal-new-label">新手机号</span>
+              <input name="account" required data-validate="account" placeholder="请输入手机号" />
+            </label>
+            <label class="code-section hidden" data-code-section="account">
+              <span>验证码</span>
+              <div class="code-inline-row">
+                <input name="verificationCode" data-code-input="account" required placeholder="验证码" />
+                <button type="button" class="btn btn-secondary code-btn" data-scene="bind-account" data-target="account">获取验证码</button>
+              </div>
+            </label>
+            <button type="submit" class="btn btn-primary btn-block">确认</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

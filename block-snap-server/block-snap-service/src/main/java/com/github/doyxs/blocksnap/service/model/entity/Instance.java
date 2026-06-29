@@ -13,7 +13,6 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("instance")
 public class Instance {
 
     @TableId(type = IdType.AUTO)
@@ -27,7 +26,7 @@ public class Instance {
 
     private String name;
 
-    @TableLogic
+    
     private Integer isDeleted;
 
     private LocalDateTime createTime;
