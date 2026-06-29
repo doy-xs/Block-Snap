@@ -19,11 +19,19 @@ public interface InstanceMapper extends BaseMapper<Instance> {
      *
      * @return 受影响行数；0 表示该用户对该实例尚无标记记录
      */
-    int updateInstanceMark();
+    int updateInstanceMark(@Param("userId") Long userId,
+                           @Param("instanceId") Integer instanceId,
+                           @Param("targetType") Integer targetType,
+                           @Param("favorite") Integer favorite,
+                           @Param("note") String note);
 
     /**
      * 跨库插入一条 block_snap_system.sys_user_mark 标记。
      * favorite / note 为 null 的列交给数据库默认值。
      */
-    void insertInstanceMark();
+    void insertInstanceMark(@Param("userId") Long userId,
+                            @Param("instanceId") Integer instanceId,
+                            @Param("targetType") Integer targetType,
+                            @Param("favorite") Integer favorite,
+                            @Param("note") String note);
 }
