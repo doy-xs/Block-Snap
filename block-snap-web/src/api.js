@@ -91,6 +91,23 @@ export const api = {
       verify: !!options.verify,
     }),
 
+  /** 更改昵称 POST /sys-user/update-nickname */
+  updateNickname: (nickname) =>
+    request('/sys-user/update-nickname', {
+      method: 'POST',
+      auth: true,
+      body: { nickname },
+    }),
+
+  /** 更改用户名 POST /sys-user/update-username */
+  updateUsername: (username) =>
+    request('/sys-user/update-username', {
+      method: 'POST',
+      auth: true,
+      verify: true,
+      body: { username },
+    }),
+
   /** 登录后：当前用户的实例列表 GET /svc-instance/list */
   listInstances: () =>
     request('/svc-instance/list', { method: 'GET', auth: true }),

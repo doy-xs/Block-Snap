@@ -23,7 +23,6 @@ public class SysUser {
     private LocalDateTime lastLoginTime;
     private Integer status;
     @JsonIgnore
-    @TableLogic // 【核心】开启逻辑删除。调用 deleteById 时，实际上是执行 UPDATE is_deleted = 1
     private Integer isDeleted;
 
     private LocalDateTime createTime;

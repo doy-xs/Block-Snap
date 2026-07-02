@@ -1,6 +1,6 @@
 import { api, isSuccess, getMessage, SCENES } from './api.js';
 import {
-  isLoggedIn, saveSessionFromLogin, getUsername, saveVerifyToken, clearAuth, clearVerifyToken,
+  isLoggedIn, saveSessionFromLogin, saveUsername, getUsername, saveVerifyToken, clearAuth, clearVerifyToken,
   hasVerifyToken, hasBoundContact, setHasBoundContact, markPendingBoundContact,
   isPhone, isEmail, isAccount, restoreSessionFromStorage,
 } from './auth.js';
@@ -19,7 +19,7 @@ let toastTimer = null;
 let currentPage = 'instances';
 let activeInstanceId = INSTANCES[0]?.id || null;
 let activeSnapshotIds = {}; // { instanceId: [snapIdA, snapIdB] } for diff
-let postLoginRedirect = null; // 'my-data' | null
+let postLoginRedirect = null; // 'enter-main' | null
 /** 'demo' = 本地 Mock；'live' = 登录后走后端 /svc-instance/list */
 let appMode = 'demo';
 let liveInstances = [];
@@ -35,6 +35,7 @@ let accountProfile = null;
 let accountProfileLoading = false;
 let accountProfileError = null;
 let verifySectionWarnTimer = null;
+let accountInlineEditing = null;
 
 // ── Utils ──
 function showToast(msg, type = 'success') {
@@ -177,6 +178,37 @@ function validateVerifyPayload(data) {
   return data;
 }
 
+function validateNicknamePayload(data) {
+  if (!data.nickname) throw new Error('请输入昵称');
+  return data;
+}
+
+function validateUsernamePayload(data) {
+  if (!isAccountSecurityVerified(accountProfile)) {
+    throw new Error('请先在账户页完成安全验证后再修改用户名');
+  }
+  if (!data.username) throw new Error('请输入用户名');
+  return data;
+}
+
+function startInlineAccountEdit(field) {
+  accountInlineEditing = field;
+  renderPage();
+  bindPageEvents();
+  requestAnimationFrame(() => {
+    const input = document.querySelector(`[data-account-inline-input="${field}"]`);
+    input?.focus();
+    input?.select();
+  });
+}
+
+function cancelInlineAccountEdit() {
+  if (!accountInlineEditing) return;
+  accountInlineEditing = null;
+  renderPage();
+  bindPageEvents();
+}
+
 function resetLiveSession() {
   appMode = 'demo';
   liveInstances = [];
@@ -232,6 +264,7 @@ async function loadAccountProfile() {
 
 async function refreshSettingsPage() {
   await loadAccountProfile();
+  updateAccountButton();
   if (currentPage === 'settings') {
     renderPage();
   }
@@ -274,6 +307,11 @@ async function enterMyData() {
   const ok = await loadLiveInstances();
   enterApp();
   if (!ok && instancesLoadError) showToast(instancesLoadError, 'error');
+}
+
+function requestEnterMainPage() {
+  if (isLoggedIn()) enterMyData();
+  else enterDemoData();
 }
 
 async function loadLiveInstances() {
@@ -456,14 +494,6 @@ async function openLiveInstanceDetail(instanceId) {
   }
 }
 
-function requestMyData() {
-  if (isLoggedIn()) enterMyData();
-  else {
-    postLoginRedirect = 'my-data';
-    openAuthModal('login');
-  }
-}
-
 const DEMO_NAMES = [
   'Steve', 'Alex', 'Spark', 'Notch', 'Herobrine', 'Dream', 'Technoblade',
   'Jeb', 'Dinnerbone', 'Grumm', 'CaptainSparklez', 'Grian', 'Ph1LzA',
@@ -479,9 +509,17 @@ function getDemoDisplayName() {
   return name;
 }
 
+function getCurrentAccountDisplayName() {
+  const nickname = String(accountProfile?.nickname || '').trim();
+  if (nickname) return nickname;
+  const username = String(accountProfile?.username || '').trim();
+  if (username) return username;
+  return getUsername() || '用户';
+}
+
 function updateAccountButton() {
   const loggedIn = isLoggedIn();
-  const name = loggedIn ? (getUsername() || '用户') : getDemoDisplayName();
+  const name = loggedIn ? getCurrentAccountDisplayName() : getDemoDisplayName();
   const welcomeText = `欢迎回来，${name}`;
 
   const appBtn = document.getElementById('btn-account');
@@ -1424,6 +1462,20 @@ function highlightVerifySection(message) {
 function handleAccountActionClick(kind, bindHint) {
   const profile = accountProfile;
 
+  if (kind === 'nickname') {
+    startInlineAccountEdit('nickname');
+    return;
+  }
+
+  if (kind === 'username') {
+    if (!isAccountSecurityVerified(profile)) {
+      highlightVerifySection('请先完成安全验证后再修改用户名');
+      return;
+    }
+    startInlineAccountEdit('username');
+    return;
+  }
+
   if (kind === 'password') {
     if (!hasAnyBoundContact(profile)) {
       showToast('请先绑定手机或邮箱', 'error');
@@ -1510,14 +1562,35 @@ function openAccountModal(kind, bindHint) {
   const titleEl = document.getElementById('account-modal-title');
   const panePassword = document.getElementById('account-modal-pane-password');
   const paneBind = document.getElementById('account-modal-pane-bind');
+  const paneNickname = document.getElementById('account-modal-pane-nickname');
+  const paneUsername = document.getElementById('account-modal-pane-username');
   if (!modal || !titleEl) return;
 
   panePassword?.classList.add('hidden');
   paneBind?.classList.add('hidden');
+  paneNickname?.classList.add('hidden');
+  paneUsername?.classList.add('hidden');
 
   const profile = accountProfile;
 
-  if (kind === 'password') {
+  if (kind === 'nickname') {
+    titleEl.textContent = '修改昵称';
+    paneNickname?.classList.remove('hidden');
+    const form = document.getElementById('form-nickname');
+    form?.reset?.();
+    const input = form?.querySelector('[name="nickname"]');
+    if (input) input.value = profile?.nickname || '';
+    setAccountModalFormDisabled(form, false);
+  } else if (kind === 'username') {
+    titleEl.textContent = '修改账户名';
+    paneUsername?.classList.remove('hidden');
+    document.getElementById('account-modal-username-hint')?.classList.add('hidden');
+    const form = document.getElementById('form-username');
+    form?.reset?.();
+    const input = form?.querySelector('[name="username"]');
+    if (input) input.value = profile?.username || '';
+    setAccountModalFormDisabled(form, false);
+  } else if (kind === 'password') {
     titleEl.textContent = '修改密码';
     panePassword?.classList.remove('hidden');
     document.getElementById('account-modal-password-hint')?.classList.add('hidden');
@@ -1599,6 +1672,38 @@ function renderAccountRow(label, valueHtml, actionHtml = '') {
     </div>`;
 }
 
+function renderInlineEditableAccountRow(label, field, value, actionLabel = '修改') {
+  const editing = accountInlineEditing === field;
+  const inputName = field === 'nickname' ? 'nickname' : 'username';
+  const inputWidthCh = Math.max(6, String(value || '').length + 2);
+  const valueHtml = editing
+    ? `<form class="account-inline-form" data-account-inline-form="${field}">
+        <input
+          type="text"
+          class="account-inline-input"
+          data-account-inline-input="${field}"
+          name="${inputName}"
+          value="${escapeHtml(value || '')}"
+          style="width:${inputWidthCh}ch"
+          maxlength="64"
+          autocomplete="off"
+        />
+      </form>`
+    : formatAccountField(value, '—');
+  const buttonHtml = editing
+    ? `<button type="button" class="btn btn-text btn-sm" data-account-inline-confirm="${field}">确认</button>`
+    : `<button type="button" class="btn btn-text btn-sm" data-account-inline-edit="${field}">${actionLabel}</button>`;
+  return renderAccountRow(label, valueHtml, buttonHtml);
+}
+
+function handleSettingsOutsideClick(e) {
+  if (currentPage !== 'settings' || !accountInlineEditing) return;
+  if (e.target.closest('[data-account-inline-form]')) return;
+  if (e.target.closest('[data-account-inline-edit]')) return;
+  if (e.target.closest('[data-account-inline-confirm]')) return;
+  cancelInlineAccountEdit();
+}
+
 function renderSettings() {
   backPage = null;
   const verified = accountProfile ? isAccountSecurityVerified(accountProfile) : false;
@@ -1658,8 +1763,8 @@ function renderSettings() {
         </div>
 
         <div class="account-rows">
-          ${renderAccountRow('账户名', formatAccountField(a.username, '—'))}
-          ${renderAccountRow('昵称', formatAccountField(a.nickname, '—'))}
+          ${renderInlineEditableAccountRow('用户名', 'username', a.username)}
+          ${renderInlineEditableAccountRow('昵称', 'nickname', a.nickname)}
           ${renderAccountRow(
             '手机',
             formatAccountField(a.phone),
@@ -1671,7 +1776,7 @@ function renderSettings() {
             `<button type="button" class="btn btn-text btn-sm" data-open-account-modal="bind" data-bind-hint="email">${emailBtnLabel}</button>`,
           )}
           ${renderAccountRow(
-            '登录密码',
+            '密码',
             '<span class="account-masked">••••••••</span>',
             '<button type="button" class="btn btn-text btn-sm" data-open-account-modal="password">修改</button>',
           )}
@@ -1689,6 +1794,7 @@ function renderSettings() {
 // ============================================================
 function bindPageEvents() {
   const root = document.getElementById('content-area');
+  document.removeEventListener('click', handleSettingsOutsideClick, true);
 
   // Instance card clicks
   root.querySelectorAll('[data-instance]').forEach((card) => {
@@ -1717,6 +1823,82 @@ function bindPageEvents() {
       renderPage();
     });
   });
+
+  root.querySelectorAll('[data-account-inline-edit]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const field = btn.dataset.accountInlineEdit;
+      if (!field) return;
+      if (field === 'username' && !isAccountSecurityVerified(accountProfile)) {
+        highlightVerifySection('请先完成安全验证后再修改用户名');
+        return;
+      }
+      startInlineAccountEdit(field);
+    });
+  });
+
+  root.querySelectorAll('[data-account-inline-input]').forEach((input) => {
+    input.addEventListener('click', (e) => e.stopPropagation());
+    input.addEventListener('keydown', async (e) => {
+      e.stopPropagation();
+      if (e.key === 'Escape') {
+        cancelInlineAccountEdit();
+        return;
+      }
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const field = input.dataset.accountInlineInput;
+      const value = input.value.trim();
+      try {
+        if (field === 'nickname') {
+          const data = validateNicknamePayload({ nickname: value });
+          const r = await api.updateNickname(data.nickname);
+          if (!isSuccess(r)) throw new Error(getMessage(r));
+        } else if (field === 'username') {
+          const data = validateUsernamePayload({ username: value });
+          const r = await api.updateUsername(data.username);
+          if (!isSuccess(r)) throw new Error(getMessage(r));
+          saveUsername(data.username);
+        }
+        accountInlineEditing = null;
+        showToast('修改成功');
+        await refreshSettingsPage();
+      } catch (err) {
+        showToast(err.message || '网络错误', 'error');
+      }
+    });
+  });
+
+  root.querySelectorAll('[data-account-inline-confirm]').forEach((btn) => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const field = btn.dataset.accountInlineConfirm;
+      const input = document.querySelector(`[data-account-inline-input="${field}"]`);
+      if (!input) return;
+      const value = input.value.trim();
+      try {
+        if (field === 'nickname') {
+          const data = validateNicknamePayload({ nickname: value });
+          const r = await api.updateNickname(data.nickname);
+          if (!isSuccess(r)) throw new Error(getMessage(r));
+        } else if (field === 'username') {
+          const data = validateUsernamePayload({ username: value });
+          const r = await api.updateUsername(data.username);
+          if (!isSuccess(r)) throw new Error(getMessage(r));
+          saveUsername(data.username);
+        }
+        accountInlineEditing = null;
+        showToast('修改成功');
+        await refreshSettingsPage();
+      } catch (err) {
+        showToast(err.message || '网络错误', 'error');
+      }
+    });
+  });
+
+  if (currentPage === 'settings') {
+    document.addEventListener('click', handleSettingsOutsideClick, true);
+  }
 
   // Instance favorite
   root.querySelectorAll('[data-inst-fav]').forEach((btn) => {
@@ -2049,6 +2231,33 @@ function bindSettingsForms() {
 }
 
 function setupAccountModal() {
+  document.getElementById('form-nickname')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const data = validateNicknamePayload(getFormData(e.target));
+      const r = await api.updateNickname(data.nickname);
+      if (isSuccess(r)) {
+        closeAccountModal();
+        showToast(getMessage(r));
+        await refreshSettingsPage();
+      } else showToast(getMessage(r), 'error');
+    } catch (err) { showToast(err.message || '网络错误', 'error'); }
+  });
+
+  document.getElementById('form-username')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const data = validateUsernamePayload(getFormData(e.target));
+      const r = await api.updateUsername(data.username);
+      if (isSuccess(r)) {
+        saveUsername(data.username);
+        closeAccountModal();
+        showToast(getMessage(r));
+        await refreshSettingsPage();
+      } else showToast(getMessage(r), 'error');
+    } catch (err) { showToast(err.message || '网络错误', 'error'); }
+  });
+
   document.getElementById('form-password')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
@@ -2172,7 +2381,7 @@ function setupAuth() {
         showToast(getMessage(r));
         closeAuthModal();
         updateAccountButton();
-        if (postLoginRedirect === 'my-data') {
+        if (postLoginRedirect === 'enter-main') {
           postLoginRedirect = null;
           await enterMyData();
         } else {
@@ -2229,12 +2438,8 @@ function setupApp() {
     el.addEventListener('click', goHome);
   });
 
-  document.querySelectorAll('[data-demo="report"]').forEach((btn) => {
-    btn.addEventListener('click', () => enterDemoData());
-  });
-
-  document.querySelectorAll('[data-action="my-data"]').forEach((btn) => {
-    btn.addEventListener('click', () => requestMyData());
+  document.querySelectorAll('[data-action="enter-main"]').forEach((btn) => {
+    btn.addEventListener('click', () => requestEnterMainPage());
   });
 
   document.querySelectorAll('.nav-item[data-page]').forEach((btn) => {

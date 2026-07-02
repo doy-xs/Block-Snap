@@ -3,12 +3,9 @@ package com.github.doyxs.blocksnap.service.controller;
 import com.github.doyxs.blocksnap.common.api.Result;
 import com.github.doyxs.blocksnap.service.model.dto.InstanceFavoriteDTO;
 import com.github.doyxs.blocksnap.service.model.dto.InstanceNoteDTO;
-import com.github.doyxs.blocksnap.service.model.vo.InstanceVO;
 import com.github.doyxs.blocksnap.service.service.InstanceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/svc-instance")

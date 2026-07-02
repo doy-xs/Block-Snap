@@ -39,8 +39,7 @@
           把零散日志变成清晰、可对比、可分享的个人数据档案。
         </p>
         <div class="hero-actions">
-          <button class="btn btn-primary btn-lg" data-demo="report">演示数据</button>
-          <button class="btn btn-outline btn-lg" data-action="my-data">我的数据</button>
+          <button class="btn btn-primary btn-lg" data-action="enter-main">进入主页面</button>
         </div>
       </section>
 
@@ -78,10 +77,35 @@
         </article>
       </section>
 
-      <footer class="landing-footer">
-        <span>Block Snap · 启动日志演示</span>
-        <span>报告数据为 Mock · 用户系统已对接后端</span>
-      </footer>
+      <div class="landing-footer-shell">
+        <footer class="landing-footer">
+          <div class="landing-footer-inner">
+            <section class="landing-footer-block">
+              <h4>Block Snap</h4>
+              <p>Minecraft 实例变更追踪与知识聚合平台。</p>
+            </section>
+            <section class="landing-footer-block">
+              <h4>关注栏</h4>
+              <div class="landing-footer-links">
+                <button type="button" class="landing-footer-link">GitHub</button>
+                <button type="button" class="landing-footer-link">Bilibili</button>
+                <button type="button" class="landing-footer-link">QQ群</button>
+              </div>
+            </section>
+            <section class="landing-footer-block">
+              <h4>赞助栏</h4>
+              <div class="landing-footer-links">
+                <button type="button" class="landing-footer-link">赞助开发</button>
+                <button type="button" class="landing-footer-link">请作者喝咖啡</button>
+              </div>
+            </section>
+          </div>
+          <div class="landing-footer-meta">
+            <span>Block Snap Demo</span>
+            <span>报告数据为 Mock · 用户系统已对接后端</span>
+          </div>
+        </footer>
+      </div>
     </div>
 
     <!-- 主应用（登录后） -->
@@ -117,7 +141,9 @@
             <button class="btn btn-ghost btn-sm" id="btn-account">欢迎回来</button>
           </div>
         </header>
-        <div class="content" id="content-area"></div>
+        <div class="app-main-scroll">
+          <div class="content" id="content-area"></div>
+        </div>
       </div>
     </div>
 
@@ -211,6 +237,25 @@
               </div>
             </label>
             <button type="submit" class="btn btn-primary btn-block">确认</button>
+          </form>
+        </div>
+        <div id="account-modal-pane-nickname" class="account-modal-pane hidden">
+          <form id="form-nickname" class="settings-form">
+            <label>
+              <span>新昵称</span>
+              <input name="nickname" required maxlength="64" placeholder="请输入新的昵称" />
+            </label>
+            <button type="submit" class="btn btn-primary btn-block">保存</button>
+          </form>
+        </div>
+        <div id="account-modal-pane-username" class="account-modal-pane hidden">
+          <p id="account-modal-username-hint" class="settings-hint settings-warn hidden">请先在账户页完成安全验证后再修改账户名。</p>
+          <form id="form-username" class="settings-form">
+            <label>
+              <span>新账户名</span>
+              <input name="username" required maxlength="64" placeholder="请输入新的账户名" />
+            </label>
+            <button type="submit" class="btn btn-primary btn-block">保存</button>
           </form>
         </div>
       </div>

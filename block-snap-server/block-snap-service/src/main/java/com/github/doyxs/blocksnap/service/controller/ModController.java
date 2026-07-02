@@ -1,8 +1,6 @@
 package com.github.doyxs.blocksnap.service.controller;
 
 import com.github.doyxs.blocksnap.common.api.Result;
-import com.github.doyxs.blocksnap.service.model.dto.InstanceFavoriteDTO;
-import com.github.doyxs.blocksnap.service.model.dto.InstanceNoteDTO;
 import com.github.doyxs.blocksnap.service.model.dto.ModFavoriteDTO;
 import com.github.doyxs.blocksnap.service.model.dto.ModNoteDTO;
 import com.github.doyxs.blocksnap.service.service.ModService;

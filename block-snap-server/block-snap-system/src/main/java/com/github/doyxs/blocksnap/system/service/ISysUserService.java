@@ -30,4 +30,8 @@ public interface ISysUserService extends IService<SysUser> {
      * Verify-Token 有效则返回完整手机/邮箱，否则脱敏；始终不返回 password。
      */
     Result<List<SysUser>> getAccount(Long userId, String verifyToken);
+    
+    void updateNickname(Long userId, SysUser sysUser);
+    
+    void updateUsername(Long userId, SysUser sysUser);
 }

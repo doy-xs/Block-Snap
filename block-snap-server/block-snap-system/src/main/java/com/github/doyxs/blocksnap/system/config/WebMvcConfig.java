@@ -18,7 +18,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addInterceptor(verifyTokenInterceptor)
                 .addPathPatterns(
                         "/sys-user/update-password", 
-                        "/sys-user/bind-account"
+                        "/sys-user/bind-account",
+                        "/sys-user/update-username"
                 );
     }
 }

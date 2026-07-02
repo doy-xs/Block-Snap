@@ -7,6 +7,7 @@ import com.github.doyxs.blocksnap.common.api.Result;
 import com.github.doyxs.blocksnap.common.constant.RedisConst;
 import com.github.doyxs.blocksnap.common.constant.RegexConst;
 import com.github.doyxs.blocksnap.common.constant.SceneConst;
+import com.github.doyxs.blocksnap.common.enums.ResultCode;
 import com.github.doyxs.blocksnap.common.exception.ApiException;
 import com.github.doyxs.blocksnap.common.utils.JwtUtils;
 import com.github.doyxs.blocksnap.system.mapper.SysUserMapper;
@@ -38,12 +39,9 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysUser::getUsername, account).or().eq(SysUser::getPhone, account).or().eq(SysUser::getEmail, account);
         SysUser user = baseMapper.selectOne(wrapper);
-        if (user == null || !PASSWORD_ENCODER.matches(password, user.getPassword())) {
+        if (user == null || !PASSWORD_ENCODER.matches(password, user.getPassword()))
             return Result.failed("用户名或密码错误");
-        }
-        if (user.getStatus() == 0) {
-            return Result.failed("账号已被禁用，请联系管理员");
-        }
+        if (user.getStatus() == 0) return Result.failed("账号已被禁用，请联系管理员");
         SysUser updateUser = new SysUser();
         updateUser.setId(user.getId());
         updateUser.setLastLoginTime(java.time.LocalDateTime.now());
@@ -202,9 +200,6 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         return Result.success("密码修改成功，请重新登录");
     }
     
-    /**
-     * 【优化】抽取公共的验证码格式和缓存校验逻辑
-     */
     private String validateCodeAndGetRedisKey(String account, String inputCode, String regex, String typeName, String scene) {
         if (StringUtils.isBlank(account)) return null;
         if (!account.matches(regex)) throw new ApiException(typeName + "格式不正确");
@@ -262,6 +257,25 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
             }
         }
         return Result.success(Collections.singletonList(row));
+    }
+    
+    @Override
+    public void updateNickname(Long userId, SysUser sysUser) {
+        try {
+            sysUser.setId(userId);
+            this.updateById(sysUser);
+        } catch (Exception e) {
+            throw new ApiException(ResultCode.FAILED);
+        }
+    }
+    
+    @Override
+    public void updateUsername(Long userId, SysUser sysUser) {
+        if (StringUtils.isBlank(sysUser.getUsername())) throw new ApiException("账户名不能为空");
+        if (this.exists(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, sysUser.getUsername())))
+            throw new ApiException("账户名已存在");
+        sysUser.setId(userId);
+        this.updateById(sysUser);
     }
     
     private void clearUserAuthCache(Long userId) {
