@@ -4,6 +4,12 @@ server:
 spring:
   application:
     name: block-snap-system # 须与网关 lb://block-snap-system 一致
+  config:
+    import: optional:classpath:application-system-local.yml
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
 
   cloud:
     nacos:
@@ -25,3 +31,13 @@ spring:
       lettuce:
         pool:
           max-active: 8
+
+aliyun:
+  oss:
+    # 这些是非敏感占位项；真实的 endpoint/bucketName/region/accessKeyId/accessKeySecret
+    # 由 application-system-local.yml（不提交 Git）覆盖。若缺失 local 配置，将退化为环境变量。
+    endpoint: ${ALIYUN_OSS_ENDPOINT:https://oss-cn-beijing.aliyuncs.com}
+    bucketName: ${ALIYUN_OSS_BUCKET:block-snap}
+    region: ${ALIYUN_OSS_REGION:cn-beijing}
+    accessKeyId: ${ALIYUN_OSS_ACCESS_KEY_ID:}
+    accessKeySecret: ${ALIYUN_OSS_ACCESS_KEY_SECRET:}

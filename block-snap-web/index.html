@@ -17,16 +17,18 @@
 
     <!-- 落地页 -->
     <div id="screen-landing" class="screen">
-      <header class="landing-header">
-        <button type="button" class="brand brand-home" data-go-home aria-label="返回主页">
-          <span class="brand-block"></span>
-          <span class="brand-name">Block Snap</span>
-        </button>
-        <div class="landing-actions">
-          <button type="button" class="btn btn-ghost hidden" id="btn-landing-account">欢迎回来</button>
-          <div class="landing-auth-btns">
-            <button class="btn btn-ghost" data-auth="login">登录</button>
-            <button class="btn btn-primary" data-auth="register">注册</button>
+      <header class="landing-header-shell">
+        <div class="landing-header">
+          <button type="button" class="brand brand-home" data-go-home aria-label="返回主页">
+            <span class="brand-block"></span>
+            <span class="brand-name">Block Snap</span>
+          </button>
+          <div class="landing-actions">
+            <button type="button" class="btn btn-ghost hidden" id="btn-landing-account">欢迎回来</button>
+            <div class="landing-auth-btns">
+              <button class="btn btn-ghost" data-auth="login">登录</button>
+              <button class="btn btn-primary" data-auth="register">注册</button>
+            </div>
           </div>
         </div>
       </header>
@@ -135,7 +137,6 @@
           </div>
           <div class="topbar-center">
             <h2 id="page-title">我的实例</h2>
-            <span class="demo-badge" id="app-mode-badge">演示数据</span>
           </div>
           <div class="topbar-end">
             <button class="btn btn-ghost btn-sm" id="btn-account">欢迎回来</button>

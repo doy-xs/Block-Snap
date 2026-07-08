@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @Slf4j // Lombok 注解，用于打印日志
-@RestControllerAdvice // 告诉 Spring：这是一个全局增强的拦截器
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
     /**

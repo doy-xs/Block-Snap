@@ -194,7 +194,6 @@ function validateUsernamePayload(data) {
 function startInlineAccountEdit(field) {
   accountInlineEditing = field;
   renderPage();
-  bindPageEvents();
   requestAnimationFrame(() => {
     const input = document.querySelector(`[data-account-inline-input="${field}"]`);
     input?.focus();
@@ -206,7 +205,6 @@ function cancelInlineAccountEdit() {
   if (!accountInlineEditing) return;
   accountInlineEditing = null;
   renderPage();
-  bindPageEvents();
 }
 
 function resetLiveSession() {
@@ -380,13 +378,8 @@ function formatPlatformLabel(value) {
 function updateAppModeBadge() {
   const badge = document.getElementById('app-mode-badge');
   if (!badge) return;
-  if (appMode === 'live') {
-    badge.textContent = '我的数据';
-    badge.classList.add('live-badge');
-  } else {
-    badge.textContent = '演示数据';
-    badge.classList.remove('live-badge');
-  }
+  badge.textContent = '演示数据';
+  badge.classList.remove('live-badge');
 }
 
 function getInstancesForCards() {
@@ -1532,10 +1525,10 @@ function renderVerifySection(profile, verified) {
 
   if (verified) {
     return `
-      <div id="account-verify-section" class="account-verify-section account-verify-section--done">
-        <div class="account-verify-section-head">
-          <h3>安全验证</h3>
-          <span class="account-inline-ok">✓ 已通过</span>
+      <div id="account-verify-section" class="account-verify-section account-verify-section--done account-verify-section--embedded">
+        <div class="account-row account-verify-row">
+          <span class="account-row-label">安全验证</span>
+          <span class="account-row-value"><span class="account-inline-ok">✓ 已通过</span></span>
         </div>
       </div>`;
   }
@@ -1543,17 +1536,20 @@ function renderVerifySection(profile, verified) {
   const accountField = `<input name="account" class="account-verify-account" type="text" required placeholder="请输入已绑定的手机或邮箱" aria-label="验证账号" autocomplete="username" />`;
 
   return `
-    <div id="account-verify-section" class="account-verify-section">
-      <div class="account-verify-section-head">
-        <h3>安全验证</h3>
+    <div id="account-verify-section" class="account-verify-section account-verify-section--embedded">
+      <div class="account-row account-verify-row">
+        <span class="account-row-label">安全验证</span>
+        <span class="account-row-value"></span>
       </div>
-      <p id="account-verify-warn" class="account-verify-warn-msg hidden" role="alert"></p>
-      <form id="form-verify" class="account-verify-inline">
-        ${accountField}
-        <input name="verificationCode" class="account-verify-code" type="text" inputmode="numeric" placeholder="验证码" required maxlength="6" autocomplete="one-time-code" />
-        <button type="button" class="btn btn-secondary btn-sm code-btn" data-scene="${SCENES.VERIFY_ACCOUNT}" data-target="account">发码</button>
-        <button type="submit" class="btn btn-soft btn-sm">验证</button>
-      </form>
+      <div class="account-verify-body">
+        <p id="account-verify-warn" class="account-verify-warn-msg hidden" role="alert"></p>
+        <form id="form-verify" class="account-verify-inline">
+          ${accountField}
+          <input name="verificationCode" class="account-verify-code" type="text" inputmode="numeric" placeholder="验证码" required maxlength="6" autocomplete="one-time-code" />
+          <button type="button" class="btn btn-secondary btn-sm code-btn" data-scene="${SCENES.VERIFY_ACCOUNT}" data-target="account">发码</button>
+          <button type="submit" class="btn btn-soft btn-sm">验证</button>
+        </form>
+      </div>
     </div>`;
 }
 
@@ -1735,10 +1731,7 @@ function renderSettings() {
     return `
       <div class="settings-page">
         <div class="settings-card">
-          <div class="account-profile-head">
-            <h3>我的账户</h3>
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-reload-account">刷新</button>
-          </div>
+          <div class="account-profile-head"><h3>我的账户</h3></div>
           <p class="settings-hint">暂无账户数据。</p>
         </div>
       </div>`;
@@ -1754,37 +1747,41 @@ function renderSettings() {
   return `
     <div class="settings-page">
       <div class="settings-card">
-        <div class="account-profile-head">
-          <h3>我的账户</h3>
-          <div class="account-profile-actions">
-            <button type="button" class="btn btn-sm account-head-btn" id="btn-reload-account">刷新</button>
-            <button type="button" class="btn btn-sm account-head-btn account-logout-btn" id="btn-logout-settings">退出登录</button>
+        <div class="account-profile-head"><h3>我的账户</h3></div>
+
+        <div class="account-panel">
+          <div class="account-rows">
+            ${renderInlineEditableAccountRow('用户名', 'username', a.username)}
+            ${renderInlineEditableAccountRow('昵称', 'nickname', a.nickname)}
+            ${renderAccountRow(
+              '手机',
+              formatAccountField(a.phone),
+              `<button type="button" class="btn btn-text btn-sm" data-open-account-modal="bind" data-bind-hint="phone">${phoneBtnLabel}</button>`,
+            )}
+            ${renderAccountRow(
+              '邮箱',
+              formatAccountField(a.email),
+              `<button type="button" class="btn btn-text btn-sm" data-open-account-modal="bind" data-bind-hint="email">${emailBtnLabel}</button>`,
+            )}
+            ${renderAccountRow(
+              '密码',
+              '<span class="account-masked">••••••••</span>',
+              '<button type="button" class="btn btn-text btn-sm" data-open-account-modal="password">修改</button>',
+            )}
+            ${renderAccountRow('账户状态', `<span class="account-badge ${st.badge}">${st.text}</span>`)}
+            ${renderAccountRow('最后登录 IP', `<span class="mono">${formatAccountField(a.lastLoginIp, '—')}</span>`)}
+          </div>
+
+          ${renderVerifySection(a, verified)}
+
+          <div class="account-row account-logout-row">
+            <span class="account-row-label">退出登录</span>
+            <span class="account-row-value"></span>
+            <div class="account-row-action">
+              <button type="button" class="btn btn-text btn-sm account-logout-btn" id="btn-logout-settings">退出登录</button>
+            </div>
           </div>
         </div>
-
-        <div class="account-rows">
-          ${renderInlineEditableAccountRow('用户名', 'username', a.username)}
-          ${renderInlineEditableAccountRow('昵称', 'nickname', a.nickname)}
-          ${renderAccountRow(
-            '手机',
-            formatAccountField(a.phone),
-            `<button type="button" class="btn btn-text btn-sm" data-open-account-modal="bind" data-bind-hint="phone">${phoneBtnLabel}</button>`,
-          )}
-          ${renderAccountRow(
-            '邮箱',
-            formatAccountField(a.email),
-            `<button type="button" class="btn btn-text btn-sm" data-open-account-modal="bind" data-bind-hint="email">${emailBtnLabel}</button>`,
-          )}
-          ${renderAccountRow(
-            '密码',
-            '<span class="account-masked">••••••••</span>',
-            '<button type="button" class="btn btn-text btn-sm" data-open-account-modal="password">修改</button>',
-          )}
-          ${renderAccountRow('账户状态', `<span class="account-badge ${st.badge}">${st.text}</span>`)}
-          ${renderAccountRow('最后登录 IP', `<span class="mono">${formatAccountField(a.lastLoginIp, '—')}</span>`)}
-        </div>
-
-        ${renderVerifySection(a, verified)}
       </div>
     </div>`;
 }
@@ -1854,15 +1851,18 @@ function bindPageEvents() {
           const data = validateNicknamePayload({ nickname: value });
           const r = await api.updateNickname(data.nickname);
           if (!isSuccess(r)) throw new Error(getMessage(r));
+          accountInlineEditing = null;
+          showToast(getMessage(r));
+          await refreshSettingsPage();
         } else if (field === 'username') {
           const data = validateUsernamePayload({ username: value });
           const r = await api.updateUsername(data.username);
           if (!isSuccess(r)) throw new Error(getMessage(r));
           saveUsername(data.username);
+          accountInlineEditing = null;
+          showToast(getMessage(r));
+          await refreshSettingsPage();
         }
-        accountInlineEditing = null;
-        showToast('修改成功');
-        await refreshSettingsPage();
       } catch (err) {
         showToast(err.message || '网络错误', 'error');
       }
@@ -1881,15 +1881,18 @@ function bindPageEvents() {
           const data = validateNicknamePayload({ nickname: value });
           const r = await api.updateNickname(data.nickname);
           if (!isSuccess(r)) throw new Error(getMessage(r));
+          accountInlineEditing = null;
+          showToast(getMessage(r));
+          await refreshSettingsPage();
         } else if (field === 'username') {
           const data = validateUsernamePayload({ username: value });
           const r = await api.updateUsername(data.username);
           if (!isSuccess(r)) throw new Error(getMessage(r));
           saveUsername(data.username);
+          accountInlineEditing = null;
+          showToast(getMessage(r));
+          await refreshSettingsPage();
         }
-        accountInlineEditing = null;
-        showToast('修改成功');
-        await refreshSettingsPage();
       } catch (err) {
         showToast(err.message || '网络错误', 'error');
       }

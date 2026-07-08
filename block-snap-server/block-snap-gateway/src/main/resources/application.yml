@@ -33,7 +33,7 @@ spring:
         - id: system_route
           uri: lb://block-snap-system
           predicates:
-            - Path=/sys-user/**
+            - Path=/sys-user/**,/sys-common/**
 
         # 业务模块 block-snap-service :8082（路径前缀与 Controller @RequestMapping 一致，不做 StripPrefix）
         - id: service_instance_route

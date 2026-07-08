@@ -125,16 +125,22 @@ body {
 
 /* ── Landing ── */
 .screen { min-height: 100vh; background: var(--bg); }
+.landing-header-shell {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.94);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.75);
+}
 .landing-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 32px; max-width: 1100px; margin: 0 auto;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  width: 100%;
+  margin: 0;
+  padding: 18px 32px 16px;
 }
 .landing-actions { display: flex; gap: 10px; }
 
 .hero {
-  max-width: 680px; margin: 0 auto; padding: 54px 24px 62px; text-align: center;
+  max-width: 680px; margin: 0 auto; padding: 40px 24px 62px; text-align: center;
   position: relative;
 }
 .hero::before { display: none; }
@@ -399,6 +405,18 @@ body {
   background: rgba(26, 158, 74, 0.08);
   color: var(--primary-hover);
   font-weight: 700;
+  font-family: inherit;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.demo-badge:hover {
+  background: rgba(26, 158, 74, 0.12);
+  border-color: rgba(26, 158, 74, 0.28);
+}
+.demo-badge:focus-visible {
+  outline: 2px solid rgba(26, 158, 74, 0.25);
+  outline-offset: 2px;
 }
 .demo-badge::before {
   content: '';
@@ -410,15 +428,6 @@ body {
     linear-gradient(180deg, #8fb05a 0%, #7c9c4c 60%, #8b6b4c 60%, #6b4e32 100%);
   box-shadow: inset 1px 1px 0 rgba(255,255,255,0.18), inset -1px -1px 0 rgba(0,0,0,0.28);
   image-rendering: pixelated;
-}
-.demo-badge.live-badge {
-  border-color: rgba(37, 99, 235, 0.16);
-  background: rgba(37, 99, 235, 0.08);
-  color: #1d4ed8;
-}
-.demo-badge.live-badge::before {
-  background:
-    linear-gradient(180deg, #93c5fd 0%, #60a5fa 60%, #64748b 60%, #475569 100%);
 }
 .instances-state {
   text-align: center;
@@ -853,34 +862,28 @@ body {
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 .account-profile-head h3 {
   margin-bottom: 0;
 }
-.account-profile-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-left: auto;
-}
-.account-head-btn {
-  background: rgba(0, 0, 0, 0.03);
+.account-panel {
   border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface);
+}
+.account-logout-row {
+  border-top: 1px solid var(--border);
+}
+.account-logout-btn {
   color: var(--muted);
   font-weight: 500;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-.account-head-btn:hover {
-  background: rgba(0, 0, 0, 0.06);
-  color: var(--text);
-  border-color: rgba(0, 0, 0, 0.12);
+  transition: color 0.15s, background 0.15s;
 }
 .account-logout-btn:hover {
   color: var(--danger);
-  border-color: rgba(220, 53, 69, 0.25);
-  background: rgba(220, 53, 69, 0.05);
+  background: rgba(220, 53, 69, 0.06);
 }
 .btn-sm {
   padding: 6px 12px;
@@ -907,9 +910,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
 }
 .account-row {
   display: grid;
@@ -958,11 +961,19 @@ body {
   flex-shrink: 0;
 }
 .account-verify-section {
-  margin-top: 20px;
-  padding: 16px;
+  margin-top: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+}
+.account-verify-section--embedded .account-verify-row {
+  border-bottom: none;
+}
+.account-verify-body {
+  padding: 14px 16px 16px;
   background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
 }
 .account-verify-section-head {
   display: flex;
@@ -1059,12 +1070,18 @@ body {
 .account-verify-section--done .account-verify-section-head {
   margin-bottom: 0;
 }
-.account-verify-section--warn {
-  border-color: rgba(198, 40, 40, 0.55);
-  background: rgba(198, 40, 40, 0.06);
-  box-shadow: 0 0 0 1px rgba(198, 40, 40, 0.12);
+.account-verify-section--done.account-verify-section--embedded .account-verify-row {
+  border-bottom: none;
 }
-.account-verify-section--warn .account-verify-section-head h3 {
+.account-verify-section--warn {
+  border-top-color: rgba(198, 40, 40, 0.35);
+  background: rgba(198, 40, 40, 0.04);
+}
+.account-verify-section--warn .account-verify-body {
+  background: rgba(198, 40, 40, 0.06);
+}
+.account-verify-section--warn .account-verify-section-head h3,
+.account-verify-section--warn .account-verify-row .account-row-label {
   color: #c62828;
 }
 .account-verify-warn-msg {
@@ -2090,6 +2107,13 @@ body {
 }
 
 @media (max-width: 768px) {
+  .landing-header-shell {
+    background: rgba(255, 255, 255, 0.96);
+  }
+  .landing-header {
+    width: 100%;
+    padding: 16px 18px 14px;
+  }
   .app-main-centered .content { justify-content: flex-start; }
   .app-main-detail .content { align-items: stretch; }
   #screen-app { flex-direction: column; }

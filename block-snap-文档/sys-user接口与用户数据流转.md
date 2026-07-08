@@ -29,7 +29,7 @@ flowchart LR
 |------|------|------|
 | L1 网关 JWT | `AuthFilter` | 除白名单外，校验 `Authorization: Bearer <token>`，并与 Redis 登录态比对 |
 | L2 用户身份 | Controller `@RequestHeader("X-User-Id")` | 网关解析 JWT 后注入 `X-User-Id`，业务层以该值操作用户 |
-| L3 二次验证 | `VerifyTokenInterceptor` | 仅拦截 `update-password`、`bind-account`，校验 `Verify-Token` 头 |
+| L3 二次验证 | `VerifyTokenInterceptor` | 拦截 `update-password`、`bind-account`、`update-username`，校验 `Verify-Token` 头 |
 
 ---
 
@@ -45,6 +45,11 @@ flowchart LR
 | POST | `/sys-user/verify-account` | 二级账户验证 | ❌ | ✅ | ✅ | ❌ |
 | POST | `/sys-user/bind-account` | 绑定手机/邮箱 | ❌ | ✅ | ✅ | 条件* |
 | POST | `/sys-user/update-password` | 修改密码 | ❌ | ✅ | ✅ | ✅ |
+| GET | `/sys-user/getAccount` | 查询当前账户（脱敏/验证后完整） | ❌ | ✅ | ✅ | 可选** |
+| POST | `/sys-user/update-nickname` | 修改昵称 | ❌ | ✅ | ✅ | ❌ |
+| POST | `/sys-user/update-username` | 修改账户名 | ❌ | ✅ | ✅ | ✅ |
+
+\*\* **getAccount 的 Verify-Token 规则：** 该接口不受 `VerifyTokenInterceptor` 强制拦截，`Verify-Token` 头是可选的——携带且有效时返回完整手机号/邮箱，否则返回脱敏后的值（不会报错拒绝）。
 
 \* **bind-account 的 Verify-Token 规则：** 若用户**尚未绑定**手机且邮箱均为空，拦截器直接放行（首次绑定无需二次验证）；若已绑定过任一联系方式，则必须携带有效 `Verify-Token`。
 
@@ -302,6 +307,20 @@ sequenceDiagram
 4. 新密码不能与原密码相同
 5. BCrypt 更新密码
 6. 删除二次验证 Token + 登录 Token → 提示重新登录
+
+---
+
+### 5.9 GET `/sys-user/getAccount`、POST `/sys-user/update-nickname`、POST `/sys-user/update-username`
+
+这三个接口原文档遗漏，补充如下（依据 `SysUserServiceImpl` 实现）：
+
+| 接口 | 请求头 | 处理逻辑 | 数据变更 |
+|------|--------|----------|----------|
+| `getAccount` | `Authorization` + `X-User-Id` +（可选）`Verify-Token` | 查询当前用户；`Verify-Token` 有效则 `phone`/`email` 返回原文，否则手机号掩码为 `138****1234` 形式、邮箱掩码为 `t***@xx.com` 形式；`password` 字段始终不返回（`@JsonIgnore`） | 无 |
+| `update-nickname` | `Authorization` + `X-User-Id` | 直接按 `userId` 更新 `nickname`，无额外校验 | `sys_user.nickname` |
+| `update-username` | `Authorization` + `X-User-Id` + `Verify-Token`（**必须**，受拦截器保护） | 校验新用户名非空、全局唯一（`username` 唯一），否则报错「账户名已存在」 | `sys_user.username` |
+
+> **一致性提醒：** `update-username` 之所以需要 `Verify-Token`，是因为账户名是登录凭证的一部分，属于高危变更，与 `update-password`、`bind-account` 同级对待。`update-nickname` 因为只是展示用昵称，不需要二次验证。
 
 ---
 

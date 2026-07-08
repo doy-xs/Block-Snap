@@ -17,11 +17,9 @@
         <version>1.0-SNAPSHOT</version>
     </dependency>
 
-    <dependency>
-        <groupId>com.github.doy-xs</groupId>
-        <artifactId>block-snap-system</artifactId>
-        <version>1.0-SNAPSHOT</version>
-    </dependency>
+    <!-- 不再依赖 block-snap-system：service 模块通过跨库 SQL（block_snap_system.sys_user_mark）
+         写 system 库的标记表，走 service 自己的数据源，不经过 system 模块的 Mapper。
+         此前的依赖是死依赖，且 SystemMarkMybatisConfig 里 @MapperScan 的包名写错也从未生效。 -->
 
     <dependency>
         <groupId>org.springframework.boot</groupId>
@@ -50,8 +48,6 @@
     </dependency>
 </dependencies>
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 

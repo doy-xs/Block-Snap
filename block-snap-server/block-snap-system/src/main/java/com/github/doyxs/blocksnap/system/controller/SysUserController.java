@@ -7,7 +7,6 @@ import com.github.doyxs.blocksnap.system.model.entity.SysUser;
 import com.github.doyxs.blocksnap.system.service.ISysUserService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,8 +16,6 @@ import java.util.List;
 public class SysUserController {
     @Autowired
     private ISysUserService sysUserService;
-    @Autowired
-    private RedisTemplate<String, String> redisTemplate;
     
     @PostMapping("/login")
     public Result<String> login(@RequestBody LoginDTO loginDTO, HttpServletRequest request) {
