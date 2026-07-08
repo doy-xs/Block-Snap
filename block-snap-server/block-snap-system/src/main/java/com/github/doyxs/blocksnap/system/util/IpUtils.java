@@ -1,12 +1,15 @@
-package com.github.doyxs.blocksnap.common.utils;
+package com.github.doyxs.blocksnap.system.util;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-public class IpUtils {
+/**
+ * HTTP 请求 IP 解析。仅 system 模块使用，故放在 system 而非 common，
+ * 避免 common 库被迫依赖 servlet 容器（tomcat-embed-core）。
+ */
+public final class IpUtils {
 
-    /**
-     * 专供普通 Spring Boot (System 模块) 使用的 IP 获取
-     */
+    private IpUtils() {}
+
     public static String getIpAddr(HttpServletRequest request) {
         if (request == null) return "unknown";
         String ip = request.getHeader("X-Client-IP");

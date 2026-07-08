@@ -48,6 +48,14 @@ spring:
           uri: lb://block-snap-service
           predicates:
             - Path=/svc-mod/**
+        - id: service_shader_route
+          uri: lb://block-snap-service
+          predicates:
+            - Path=/svc-shader/**
+        - id: service_shader_route
+          uri: lb://block-snap-service
+          predicates:
+            - Path=/svc-shader/**
 
   data:
     redis:

@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ModVo {
+public class ModVO {
     private Integer id;//mod_snapshot.id
     private String name;//mod_info.name
     private String version;//mod_snapshot.version（当前版本）

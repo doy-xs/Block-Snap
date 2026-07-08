@@ -1,0 +1,35 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: block-snap-service # 须与网关 lb://block-snap-service 一致
+
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+        username: nacos
+        password: nacos
+
+  # 单数据源：指向 block_snap_service 库。
+  # 对 block_snap_system.sys_user_mark 的访问通过跨库 SQL（显式库名前缀）完成，
+  # 前提是两个库在同一 MySQL 实例且该账号有跨库权限。因此不再需要第二个数据源，
+  # 也不再需要手写 DataSourceConfig / ServiceMybatisConfig，由 Spring Boot + MyBatis-Plus
+  # 自动配置接管（自动配置会正确注册 MybatisPlusInterceptor 等插件）。
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/block_snap_service?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: root
+
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6380
+      database: 0
+
+mybatis-plus:
+  mapper-locations: classpath:mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true

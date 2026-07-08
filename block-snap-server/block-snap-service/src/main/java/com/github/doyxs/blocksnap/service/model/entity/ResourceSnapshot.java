@@ -9,25 +9,25 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ModSnapshot {
-
+public class ResourceSnapshot {
     private Integer id;
-
+    
     private Integer snapshotId;
-
-    private Integer modInfoId;
-
+    
+    private Integer resourceInfoId;
+    
     private String version;
-
-    private String modHash;
-
-    private Long loadTime;
-
+    
+    private String resourceHash;
+    
+    private Integer packFormat;
+    
     private Integer isDeleted;
-
+    
+    
     private LocalDateTime addedTime;
-
+    
     private LocalDateTime updateTime;
-
+    
     private LocalDateTime createTime;
 }

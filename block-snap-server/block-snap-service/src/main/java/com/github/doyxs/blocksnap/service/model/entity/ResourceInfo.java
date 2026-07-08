@@ -7,26 +7,25 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Instance {
-
+public class ResourceInfo {
+    
     @TableId(type = IdType.AUTO)
     private Integer id;
-
-    private Long modpackInfoId;
-
-    private Long userId;
-
-    private String clientKey;
-
+    
     private String name;
-
-    private Integer isDeleted;
-
+    
+    private String hash;
+    
+    private Integer platform;
+    
+    private String version;
+    private String url;
+    private String icon;
+    
     private LocalDateTime createTime;
-
+    
     private LocalDateTime updateTime;
 }

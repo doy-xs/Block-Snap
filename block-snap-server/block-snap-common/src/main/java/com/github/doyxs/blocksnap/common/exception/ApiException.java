@@ -10,7 +10,7 @@ import lombok.Getter;
 @Getter
 public class ApiException extends RuntimeException {
     
-    private final long code;
+    private final int code;
     private final String message;
 
     public ApiException(String message) {

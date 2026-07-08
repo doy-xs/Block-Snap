@@ -9,7 +9,7 @@ import com.github.doyxs.blocksnap.service.mapper.ModSnapshotMapper;
 import com.github.doyxs.blocksnap.service.model.dto.ModFavoriteDTO;
 import com.github.doyxs.blocksnap.service.model.dto.ModNoteDTO;
 import com.github.doyxs.blocksnap.service.model.entity.ModSnapshot;
-import com.github.doyxs.blocksnap.service.model.vo.ModVo;
+import com.github.doyxs.blocksnap.service.model.vo.ModVO;
 import com.github.doyxs.blocksnap.service.service.ModService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,8 +26,8 @@ public class ModServiceImpl implements ModService {
     private final ModInfoMapper modInfoMapper;
 
     @Override
-    public List<ModVo> listByInstanceId(Long userId, Integer instanceId) {
-        List<ModVo> list = modSnapshotMapper.selectListByInstanceId(userId, instanceId);
+    public List<ModVO> listByInstanceId(Long userId, Integer instanceId) {
+        List<ModVO> list = modSnapshotMapper.selectListByInstanceId(userId, instanceId);
         return CollectionUtils.isEmpty(list) ? Collections.emptyList() : list;
     }
 

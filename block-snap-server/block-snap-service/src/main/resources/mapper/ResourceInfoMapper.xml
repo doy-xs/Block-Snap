@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.github.doyxs.blocksnap.service.mapper.ResourceInfoMapper">
+
+    <update id="updateResourceMark">
+        UPDATE block_snap_system.sys_user_mark
+        <set>
+            <if test="favorite != null">favorite = #{favorite},</if>
+            <if test="note != null">note = #{note},</if>
+            update_time = NOW()
+        </set>
+        WHERE user_id = #{userId}
+          AND target_id = #{resourceId}
+          AND target_type = #{targetType}
+    </update>
+
+    <insert id="insertResourceMark">
+        INSERT INTO block_snap_system.sys_user_mark
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            user_id, target_id, target_type,
+            <if test="favorite != null">favorite,</if>
+            <if test="note != null">note,</if>
+        </trim>
+        <trim prefix="VALUES (" suffix=")" suffixOverrides=",">
+            #{userId}, #{resourceId}, #{targetType},
+            <if test="favorite != null">#{favorite},</if>
+            <if test="note != null">#{note},</if>
+        </trim>
+    </insert>
+
+</mapper>

@@ -10,25 +10,31 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-public class JwtUtils {
+/**
+ * JWT 生成与解析。
+ * <p>
+ * 保持纯静态工具类，不依赖 Spring 扫描——因为 gateway（WebFlux）的 @SpringBootApplication
+ * 默认只扫描自身包，不扫 common；若改为 @Component + @PostConstruct，gateway 不会实例化它，
+ * 静态字段将保持 null 导致 NPE。
+ * <p>
+ * 密钥与过期时间通过 JVM 系统属性 / 环境变量外部化（带默认值），生产环境应通过启动参数覆盖：
+ *   -Dblock.snap.jwt.secret=... 或 BLOCK_SNAP_JWT_SECRET=...
+ */
+public final class JwtUtils {
 
-    // 【重要】服务端的私钥。真实环境中应该写在 Nacos 配置文件里。
-    private static final String SECRET_STRING = "block-snap-microservice-super-secret-key-2026";
+    private static final String DEFAULT_SECRET =
+            "block-snap-microservice-super-secret-key-2026-change-in-production";
 
-    // 1. 明确指定 UTF-8 编码，并且推荐使用 SecretKey 类型而不是基础的 Key 类型
-    private static final SecretKey SECRET_KEY = Keys.hmacShaKeyFor(SECRET_STRING.getBytes(StandardCharsets.UTF_8));
+    private static final SecretKey SECRET_KEY = Keys.hmacShaKeyFor(
+            System.getProperty("block.snap.jwt.secret",
+                    System.getenv().getOrDefault("BLOCK_SNAP_JWT_SECRET", DEFAULT_SECRET))
+                    .getBytes(StandardCharsets.UTF_8));
 
-    // Token 的有效时间，设置 2 小时 (毫秒)
-    private static final long EXPIRATION_TIME = 1000 * 60 * 60 * 2;
+    private static final long EXPIRATION_TIME = 1000L * 60 * 60 * 2;
 
-    /**
-     * 生成 JWT
-     * @param userId   用户主键
-     * @param username 用户名
-     * @return 拼装好的 Token 字符串
-     */
+    private JwtUtils() {}
+
     public static String generateToken(Long userId, String username) {
-        // 构建 Payload 中的自定义数据
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("username", username);
@@ -37,23 +43,19 @@ public class JwtUtils {
         Date expirationDate = new Date(now.getTime() + EXPIRATION_TIME);
 
         return Jwts.builder()
-                .claims(claims)                     // 2. 去掉了 set 前缀
-                .subject(username)                  // 主体通常设为用户名
-                .issuedAt(now)                      // 签发时间
-                .expiration(expirationDate)         // 过期时间
-                .signWith(SECRET_KEY, Jwts.SIG.HS256) // 3. 使用新版的签名算法常量
+                .claims(claims)
+                .subject(username)
+                .issuedAt(now)
+                .expiration(expirationDate)
+                .signWith(SECRET_KEY, Jwts.SIG.HS256)
                 .compact();
     }
 
-    /**
-     * 解析并校验 JWT (适配 JJWT 0.12.x)
-     * @param token 前端传来的 token 字符串
-     * @return 解析后的 Claims（包含 userId 和 username）。如果报错说明 Token 伪造或过期。
-     */
     public static Claims parseToken(String token) {
         return Jwts.parser()
-                .verifyWith(SECRET_KEY)       // 1. 设置用于验证签名的密钥
-                .build()                      // 2. 构建解析器
-                .parseSignedClaims(token)     // 3. 解析并验证 Token 字符串
-                .getPayload();                // 4. 获取其中的有效负载 (即 Claims)
-    }}
+                .verifyWith(SECRET_KEY)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+    }
+}

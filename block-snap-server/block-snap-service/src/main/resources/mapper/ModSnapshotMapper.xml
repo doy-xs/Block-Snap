@@ -8,7 +8,7 @@
       ModVo.id           : mod_snapshot.id
       favorite/note      : block_snap_system.sys_user_mark（target_type=2, target_id=mod_snapshot.id）
     -->
-    <select id="selectListByInstanceId" resultType="com.github.doyxs.blocksnap.service.model.vo.ModVo">
+    <select id="selectListByInstanceId" resultType="com.github.doyxs.blocksnap.service.model.vo.ModVO">
         <![CDATA[
         WITH target_instance AS (SELECT id
                                  FROM instance

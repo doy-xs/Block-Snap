@@ -1,12 +1,11 @@
 package com.github.doyxs.blocksnap.system.controller;
 
 import com.github.doyxs.blocksnap.common.api.Result;
-import com.github.doyxs.blocksnap.common.utils.IpUtils;
 import com.github.doyxs.blocksnap.system.model.dto.*;
 import com.github.doyxs.blocksnap.system.model.entity.SysUser;
 import com.github.doyxs.blocksnap.system.service.ISysUserService;
+import com.github.doyxs.blocksnap.system.util.IpUtils;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,9 +13,13 @@ import java.util.List;
 @RestController
 @RequestMapping("/sys-user")
 public class SysUserController {
-    @Autowired
-    private ISysUserService sysUserService;
-    
+
+    private final ISysUserService sysUserService;
+
+    public SysUserController(ISysUserService sysUserService) {
+        this.sysUserService = sysUserService;
+    }
+
     @PostMapping("/login")
     public Result<String> login(@RequestBody LoginDTO loginDTO, HttpServletRequest request) {
         return sysUserService.login(loginDTO.getUsername(), loginDTO.getPassword(), IpUtils.getIpAddr(request));

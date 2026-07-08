@@ -13,6 +13,6 @@ public enum ResultCode {
     FORBIDDEN(403, "没有相关权限"),
     VALIDATE_FAILED(404, "参数检验失败");
 
-    private final long code;
+    private final int code;
     private final String message;
 }
